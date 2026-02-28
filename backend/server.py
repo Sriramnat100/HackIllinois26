@@ -10,7 +10,13 @@ from typing import List, Optional, Any
 import uuid
 from datetime import datetime, timezone
 from openai import AsyncOpenAI
-from emergentintegrations.llm.openai import OpenAIChatRealtime
+
+try:
+    from emergentintegrations.llm.openai import OpenAIChatRealtime
+    HAS_REALTIME = True
+except ImportError:
+    OpenAIChatRealtime = None
+    HAS_REALTIME = False
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,9 +33,9 @@ def get_openai_client():
         raise ValueError("No API key configured. Set OPENAI_API_KEY in .env")
     return AsyncOpenAI(api_key=api_key)
 
-# Initialize OpenAI Realtime Chat for WebRTC
+# Initialize OpenAI Realtime Chat for WebRTC (optional; requires emergentintegrations)
 openai_api_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
-realtime_chat = OpenAIChatRealtime(api_key=openai_api_key) if openai_api_key else None
+realtime_chat = OpenAIChatRealtime(api_key=openai_api_key) if (HAS_REALTIME and openai_api_key) else None
 
 # Create the main app without a prefix
 app = FastAPI()
