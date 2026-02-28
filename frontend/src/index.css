@@ -121,7 +121,7 @@
 }
 
 .dark .text-page-title {
-  @apply text-slate-100;
+  @apply text-white;
 }
 
 .text-section-title {
@@ -129,7 +129,7 @@
 }
 
 .dark .text-section-title {
-  @apply text-slate-200;
+  @apply text-white;
 }
 
 .text-body {
@@ -137,7 +137,7 @@
 }
 
 .dark .text-body {
-  @apply text-slate-300;
+  @apply text-white;
 }
 
 .text-secondary {
@@ -145,7 +145,7 @@
 }
 
 .dark .text-secondary {
-  @apply text-slate-400;
+  @apply text-white/90;
 }
 
 .text-meta {
@@ -153,7 +153,7 @@
 }
 
 .dark .text-meta {
-  @apply text-slate-500;
+  @apply text-white/90;
 }
 
 /* ========================================
@@ -233,7 +233,7 @@
 }
 
 .dark .table-enterprise th {
-  @apply text-slate-400 bg-slate-800/50;
+  @apply text-white bg-slate-800/50;
 }
 
 .table-enterprise td {
@@ -241,7 +241,7 @@
 }
 
 .dark .table-enterprise td {
-  @apply text-slate-300;
+  @apply text-white;
 }
 
 .table-enterprise tbody tr {
@@ -304,7 +304,7 @@
 }
 
 .dark .btn-secondary-cat {
-  @apply bg-slate-800 text-slate-200 border-slate-700;
+  @apply bg-slate-800 text-white border-slate-700;
 }
 
 .dark .btn-secondary-cat:hover {
@@ -361,7 +361,7 @@
 }
 
 .dark .badge-draft {
-  @apply bg-slate-800 text-slate-400 border-slate-700;
+  @apply bg-slate-800 text-white border-slate-700;
 }
 
 .badge-submitted {
@@ -470,7 +470,7 @@
 }
 
 .dark .chat-bubble-assistant {
-  @apply bg-slate-800 text-slate-200;
+  @apply bg-slate-800 text-white;
 }
 
 .chat-chip {
@@ -484,11 +484,11 @@
 }
 
 .dark .chat-chip {
-  @apply bg-slate-800 border-slate-700 text-slate-300;
+  @apply bg-slate-800 border-slate-700 text-white;
 }
 
 .dark .chat-chip:hover {
-  @apply bg-[#F7B500]/20 border-[#F7B500]/50 text-slate-100;
+  @apply bg-[#F7B500]/20 border-[#F7B500]/50 text-white;
 }
 
 /* ========================================
@@ -516,7 +516,19 @@
 }
 
 .dark .analytics-insight {
-  @apply text-slate-400;
+  @apply text-white/90;
+}
+
+/* Chart axis/labels: no grey in dark mode */
+.dark .recharts-cartesian-axis-tick text,
+.dark .recharts-legend-item text {
+  fill: white !important;
+}
+
+/* Input placeholders: white in dark mode */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ========================================
@@ -658,7 +670,7 @@
 }
 
 .dark .tab-enterprise:hover {
-  @apply text-slate-300;
+  @apply text-white;
 }
 
 .tab-enterprise[data-state="active"] {

@@ -122,7 +122,7 @@ export const InspectionWizard = () => {
                       ? "bg-emerald-500 text-white shadow-md"
                       : currentStep === step.id
                       ? "bg-[#F7B500] text-slate-900 shadow-md"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-white/90"
                   )}
                   data-testid={`wizard-step-${step.id}`}
                 >
@@ -135,14 +135,14 @@ export const InspectionWizard = () => {
                 <span
                   className={cn(
                     "mt-2 text-[13px] font-semibold",
-                    currentStep >= step.id ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"
+                    currentStep >= step.id ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/90"
                   )}
                 >
                   {step.name}
                 </span>
                 <span className={cn(
                   "text-[11px]",
-                  currentStep >= step.id ? "text-slate-500 dark:text-slate-400" : "text-slate-300 dark:text-slate-600"
+                  currentStep >= step.id ? "text-slate-500 dark:text-white" : "text-slate-300 dark:text-white/70"
                 )}>
                   {step.description}
                 </span>
@@ -172,14 +172,14 @@ export const InspectionWizard = () => {
                     <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-1">
                       Select Equipment
                     </h2>
-                    <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[13px] text-slate-500 dark:text-white">
                       Choose the equipment you want to inspect
                     </p>
                   </div>
 
                   <div className="space-y-5">
                     <div>
-                      <Label htmlFor="equipment" className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+                      <Label htmlFor="equipment" className="text-[13px] font-semibold text-slate-700 dark:text-white">
                         Equipment Model
                       </Label>
                       <Select
@@ -204,7 +204,7 @@ export const InspectionWizard = () => {
 
                     {formData.equipment_model && (
                       <div>
-                        <Label htmlFor="serial" className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+                        <Label htmlFor="serial" className="text-[13px] font-semibold text-slate-700 dark:text-white">
                           Serial Number
                         </Label>
                         <Input
@@ -223,7 +223,7 @@ export const InspectionWizard = () => {
                     )}
 
                     <div>
-                      <Label htmlFor="customer" className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+                      <Label htmlFor="customer" className="text-[13px] font-semibold text-slate-700 dark:text-white">
                         <Building2 className="w-4 h-4 inline mr-1.5 text-slate-400" />
                         Customer
                       </Label>
@@ -243,7 +243,7 @@ export const InspectionWizard = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="location" className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+                      <Label htmlFor="location" className="text-[13px] font-semibold text-slate-700 dark:text-white">
                         <MapPin className="w-4 h-4 inline mr-1.5 text-slate-400" />
                         Location
                       </Label>
@@ -272,7 +272,7 @@ export const InspectionWizard = () => {
                     <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-1">
                       Select Inspection Type
                     </h2>
-                    <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[13px] text-slate-500 dark:text-white">
                       Choose the type of inspection to perform
                     </p>
                   </div>
@@ -317,16 +317,16 @@ export const InspectionWizard = () => {
                                 {type.name}
                               </span>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                <span className="text-[11px] text-slate-500 dark:text-white bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                                   {type.duration}
                                 </span>
-                                <span className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                <span className="text-[11px] text-slate-500 dark:text-white bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                                   {type.items}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-2 ml-12">
+                          <p className="text-[13px] text-slate-500 dark:text-white mt-2 ml-12">
                             {type.description}
                           </p>
                         </div>
@@ -343,38 +343,38 @@ export const InspectionWizard = () => {
                     <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-1">
                       Review & Start
                     </h2>
-                    <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[13px] text-slate-500 dark:text-white">
                       Confirm the details before starting the inspection
                     </p>
                   </div>
 
                   <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 space-y-4">
                     <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-[12px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Equipment</span>
+                      <span className="text-[12px] text-slate-500 dark:text-white font-medium uppercase tracking-wide">Equipment</span>
                       <span className="text-[14px] font-semibold text-slate-900 dark:text-white">
                         {formData.equipment_model}
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-[12px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Serial Number</span>
-                      <span className="text-[14px] font-mono text-slate-700 dark:text-slate-300">
+                      <span className="text-[12px] text-slate-500 dark:text-white font-medium uppercase tracking-wide">Serial Number</span>
+                      <span className="text-[14px] font-mono text-slate-700 dark:text-white">
                         {formData.serial_number}
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-[12px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Customer</span>
-                      <span className="text-[14px] text-slate-700 dark:text-slate-300">
+                      <span className="text-[12px] text-slate-500 dark:text-white font-medium uppercase tracking-wide">Customer</span>
+                      <span className="text-[14px] text-slate-700 dark:text-white">
                         {formData.customer}
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-[12px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Location</span>
-                      <span className="text-[14px] text-slate-700 dark:text-slate-300">
+                      <span className="text-[12px] text-slate-500 dark:text-white font-medium uppercase tracking-wide">Location</span>
+                      <span className="text-[14px] text-slate-700 dark:text-white">
                         {formData.location}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Inspection Type</span>
+                      <span className="text-[12px] text-slate-500 dark:text-white font-medium uppercase tracking-wide">Inspection Type</span>
                       <span className="text-[14px] font-semibold text-[#F7B500]">
                         {formData.inspection_type}
                       </span>
@@ -388,7 +388,7 @@ export const InspectionWizard = () => {
                       </div>
                       <div>
                         <p className="text-[14px] font-semibold text-slate-900 dark:text-white">Ready to start!</p>
-                        <p className="text-[13px] text-slate-600 dark:text-slate-400 mt-1">
+                        <p className="text-[13px] text-slate-600 dark:text-white mt-1">
                           Once you begin, the AI will assist you in capturing findings in real-time. Make sure you have good lighting and a stable camera position.
                         </p>
                       </div>
@@ -442,7 +442,7 @@ export const InspectionWizard = () => {
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">
+                <span className="text-[11px] text-slate-400 dark:text-white/90 font-semibold uppercase tracking-wider">
                   Equipment
                 </span>
                 <p className="text-[14px] font-semibold text-slate-900 dark:text-white mt-1">
@@ -451,37 +451,37 @@ export const InspectionWizard = () => {
               </div>
               {formData.serial_number && (
                 <div>
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">
+                  <span className="text-[11px] text-slate-400 dark:text-white/90 font-semibold uppercase tracking-wider">
                     Serial
                   </span>
-                  <p className="text-[14px] font-mono text-slate-700 dark:text-slate-300 mt-1">
+                  <p className="text-[14px] font-mono text-slate-700 dark:text-white mt-1">
                     {formData.serial_number}
                   </p>
                 </div>
               )}
               {formData.customer && (
                 <div>
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">
+                  <span className="text-[11px] text-slate-400 dark:text-white/90 font-semibold uppercase tracking-wider">
                     Customer
                   </span>
-                  <p className="text-[14px] text-slate-700 dark:text-slate-300 mt-1">
+                  <p className="text-[14px] text-slate-700 dark:text-white mt-1">
                     {formData.customer}
                   </p>
                 </div>
               )}
               {formData.location && (
                 <div>
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">
+                  <span className="text-[11px] text-slate-400 dark:text-white/90 font-semibold uppercase tracking-wider">
                     Location
                   </span>
-                  <p className="text-[14px] text-slate-700 dark:text-slate-300 mt-1">
+                  <p className="text-[14px] text-slate-700 dark:text-white mt-1">
                     {formData.location}
                   </p>
                 </div>
               )}
               {formData.inspection_type && (
                 <div>
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">
+                  <span className="text-[11px] text-slate-400 dark:text-white/90 font-semibold uppercase tracking-wider">
                     Type
                   </span>
                   <p className="text-[14px] font-semibold text-[#F7B500] mt-1">
@@ -490,7 +490,7 @@ export const InspectionWizard = () => {
                 </div>
               )}
               {!formData.equipment_model && (
-                <p className="text-[13px] text-slate-400 dark:text-slate-500 italic">
+                <p className="text-[13px] text-slate-400 dark:text-white/90 italic">
                   Fill in the form to see your inspection details
                 </p>
               )}

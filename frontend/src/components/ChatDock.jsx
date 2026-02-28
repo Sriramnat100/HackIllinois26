@@ -105,18 +105,18 @@ export const ChatDock = () => {
                   </h3>
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Ready to help</span>
+                    <span className="text-[11px] text-slate-500 dark:text-white/90">Ready to help</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-400 dark:text-slate-500 hidden sm:block">
+                <span className="text-[11px] text-slate-400 dark:text-white/90 hidden sm:block">
                   Powered by GPT
                 </span>
                 {isOpen ? (
-                  <ChevronDown className="w-5 h-5 text-slate-400" />
+                  <ChevronDown className="w-5 h-5 text-slate-400 dark:text-white/80" />
                 ) : (
-                  <ChevronUp className="w-5 h-5 text-slate-400" />
+                  <ChevronUp className="w-5 h-5 text-slate-400 dark:text-white/80" />
                 )}
               </div>
             </div>
@@ -136,7 +136,7 @@ export const ChatDock = () => {
                   >
                     {message.role === "assistant" && (
                       <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
-                        <Bot className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                        <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                       </div>
                     )}
                     <div
@@ -151,7 +151,7 @@ export const ChatDock = () => {
                       <p className="text-[13px] leading-relaxed">{message.content}</p>
                       {message.chart_data && (
                         <div className="mt-3 bg-white dark:bg-slate-900 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                          <p className="text-[11px] font-semibold text-slate-600 dark:text-white mb-2 uppercase tracking-wide">
                             {message.chart_data.title}
                           </p>
                           <div className="h-28">
@@ -188,7 +188,7 @@ export const ChatDock = () => {
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0">
-                      <Bot className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                     </div>
                     <div className="chat-bubble-assistant">
                       <div className="flex gap-1.5 py-1">

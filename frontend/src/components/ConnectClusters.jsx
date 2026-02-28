@@ -31,11 +31,11 @@ export const ConnectClusters = ({ clusters = [] }) => {
                   {cluster.count} similar
                 </span>
               </div>
-              <p className="text-[13px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+              <p className="text-[13px] text-slate-600 dark:text-white line-clamp-2 leading-relaxed">
                 {cluster.summary}
               </p>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-slate-300 dark:text-white/70 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
           </div>
         </div>
       ))}
@@ -43,10 +43,10 @@ export const ConnectClusters = ({ clusters = [] }) => {
       {clusters.length === 0 && (
         <div className="text-center py-16">
           <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
-            <Layers className="w-7 h-7 text-slate-300 dark:text-slate-600" />
+            <Layers className="w-7 h-7 text-slate-300 dark:text-white/70" />
           </div>
-          <p className="text-[14px] font-medium text-slate-500 dark:text-slate-400">No similar inspections found</p>
-          <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-1">AI will identify patterns across inspections</p>
+          <p className="text-[14px] font-medium text-slate-500 dark:text-white">No similar inspections found</p>
+          <p className="text-[12px] text-slate-400 dark:text-white/90 mt-1">AI will identify patterns across inspections</p>
         </div>
       )}
     </div>

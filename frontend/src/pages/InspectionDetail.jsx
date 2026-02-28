@@ -113,7 +113,7 @@ export default function InspectionDetail() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <div className="spinner-cat" />
       </div>
     );
@@ -121,9 +121,9 @@ export default function InspectionDetail() {
 
   if (!inspection) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <div className="text-center">
-          <p className="text-slate-500 dark:text-slate-400 mb-4 text-[14px]">Inspection not found</p>
+          <p className="text-slate-500 dark:text-white/90 mb-4 text-[14px]">Inspection not found</p>
           <Button onClick={() => navigate("/app/dashboard")} className="btn-primary-cat">
             Back to Dashboard
           </Button>
@@ -133,7 +133,7 @@ export default function InspectionDetail() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-slate-950 page-enter" data-testid="inspection-detail-page">
+    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 page-enter" data-testid="inspection-detail-page">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -141,7 +141,7 @@ export default function InspectionDetail() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 px-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white -ml-2"
+              className="h-9 px-2 text-slate-500 hover:text-slate-900 dark:text-white dark:hover:text-white -ml-2"
               onClick={() => navigate("/app/dashboard")}
               data-testid="back-btn"
             >
@@ -157,13 +157,13 @@ export default function InspectionDetail() {
                   <h1 className="text-[20px] font-bold text-slate-900 dark:text-white">
                     {inspection.equipment_model}
                   </h1>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400 font-mono">
+                  <p className="text-[13px] text-slate-500 dark:text-white/90 font-mono">
                     {inspection.serial_number}
                   </p>
                 </div>
                 <StatusBadge status={inspection.status} />
               </div>
-              <div className="flex items-center gap-4 text-[12px] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-4 text-[12px] text-slate-500 dark:text-white/90">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
                   {inspection.date}
@@ -172,7 +172,7 @@ export default function InspectionDetail() {
                   <MapPin className="w-3.5 h-3.5" />
                   {inspection.location}
                 </span>
-                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-600 dark:text-slate-400">
+                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-600 dark:text-white">
                   {inspection.inspection_type}
                 </span>
               </div>
@@ -257,7 +257,7 @@ export default function InspectionDetail() {
                 <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white">Executive Summary</h3>
               </div>
               <div className="p-5">
-                <p className="text-[14px] text-slate-700 dark:text-slate-300 leading-relaxed">{inspection.summary}</p>
+                <p className="text-[14px] text-slate-700 dark:text-white leading-relaxed">{inspection.summary}</p>
               </div>
             </div>
 
@@ -306,7 +306,7 @@ export default function InspectionDetail() {
                             ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400"
                             : item.priority === 2
                             ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400"
-                            : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                            : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-white"
                         }`}
                       >
                         {item.priority}
@@ -314,15 +314,15 @@ export default function InspectionDetail() {
                       <div className="flex-1">
                         <p className="font-semibold text-[14px] text-slate-900 dark:text-white">{item.action}</p>
                         {item.why && (
-                          <p className="text-[13px] text-slate-600 dark:text-slate-400 mt-1.5">
-                            <span className="font-medium text-slate-700 dark:text-slate-300">Why:</span> {item.why}
+                          <p className="text-[13px] text-slate-600 dark:text-white mt-1.5">
+                            <span className="font-medium text-slate-700 dark:text-white">Why:</span> {item.why}
                           </p>
                         )}
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${
                             item.priority === 1 
                               ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                              : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-white"
                           }`}>
                             {item.risk}
                           </span>
@@ -383,11 +383,11 @@ export default function InspectionDetail() {
                           {item.evidence ? (
                             <span className="text-blue-600 dark:text-blue-400 text-[12px] hover:underline cursor-pointer">{item.evidence}</span>
                           ) : (
-                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                            <span className="text-slate-300 dark:text-white/70">—</span>
                           )}
                         </td>
                         <td className="max-w-[200px]">
-                          <span className="text-[12px] text-slate-600 dark:text-slate-400 line-clamp-2">
+                          <span className="text-[12px] text-slate-600 dark:text-white line-clamp-2">
                             {item.recommended_action || "—"}
                           </span>
                         </td>
@@ -399,7 +399,7 @@ export default function InspectionDetail() {
                                 style={{ width: `${Math.round(item.confidence * 100)}%` }}
                               />
                             </div>
-                            <span className="text-[12px] text-slate-600 dark:text-slate-400 font-mono">
+                            <span className="text-[12px] text-slate-600 dark:text-white font-mono">
                               {Math.round(item.confidence * 100)}%
                             </span>
                           </div>
