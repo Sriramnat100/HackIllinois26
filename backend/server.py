@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,6 +8,8 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Any
 import uuid
+import json
+import re
 from datetime import datetime, timezone
 from openai import AsyncOpenAI
 
@@ -32,6 +34,52 @@ def get_openai_client():
     if not api_key:
         raise ValueError("No API key configured. Set OPENAI_API_KEY in .env")
     return AsyncOpenAI(api_key=api_key)
+
+# Model for chat and vision (gpt-4o requires higher tier; gpt-4o-mini is widely available)
+OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+
+
+def _extract_chart_json(text: str) -> Optional[dict]:
+    """Extract a chart JSON object from model response. Expects format: {"chart_type": "bar", "title": "...", "data": [{"category": "X", "count": N}, ...]}"""
+    if "chart_type" not in text.lower() or '"data"' not in text:
+        return None
+    # Find start of JSON object containing chart_type (allow nested braces)
+    start = text.find('{"chart_type"')
+    if start == -1:
+        start = text.find("{\"chart_type\"")
+    if start == -1:
+        return None
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    obj = json.loads(text[start : i + 1])
+                    if isinstance(obj.get("data"), list) and obj.get("chart_type"):
+                        # Normalize to bar chart format: category + count (frontend expects these)
+                        normalized = []
+                        for item in obj["data"]:
+                            if not isinstance(item, dict):
+                                continue
+                            cat = item.get("category") or item.get("name") or str(len(normalized))
+                            val = item.get("count") if "count" in item else item.get("value", 0)
+                            try:
+                                val = int(float(val))
+                            except (TypeError, ValueError):
+                                val = 0
+                            normalized.append({"category": str(cat)[:30], "count": val})
+                        if normalized:
+                            obj["data"] = normalized[:12]
+                            obj["chart_type"] = "bar"
+                            obj["title"] = obj.get("title") or "Chart"
+                            return obj
+                except (json.JSONDecodeError, TypeError):
+                    pass
+                return None
+    return None
 
 # Initialize OpenAI Realtime Chat for WebRTC (optional; requires emergentintegrations)
 openai_api_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
@@ -140,6 +188,29 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     chart_data: Optional[dict] = None
+
+# Session-scoped uploaded documents for chatbot context (session_id -> {filename, text})
+SESSION_DOCUMENTS: dict[str, dict[str, Any]] = {}
+MAX_DOCUMENT_CHARS = 50_000  # truncate to stay within context window
+
+def extract_text_from_pdf(content: bytes) -> str:
+    """Extract text from PDF bytes. Returns empty string on failure."""
+    try:
+        from pypdf import PdfReader
+        from io import BytesIO
+        reader = PdfReader(BytesIO(content))
+        parts = []
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                parts.append(t)
+        text = "\n\n".join(parts).strip()
+        if len(text) > MAX_DOCUMENT_CHARS:
+            text = text[:MAX_DOCUMENT_CHARS] + "\n\n[Document truncated for length.]"
+        return text
+    except Exception as e:
+        logger.warning(f"PDF extraction failed: {e}")
+        return ""
 
 class AnalyticsData(BaseModel):
     failed_parts: List[dict]
@@ -456,15 +527,79 @@ async def get_analytics():
     """Get analytics data for dashboard"""
     return MOCK_ANALYTICS
 
+# Document upload for chatbot context (PDF)
+@api_router.post("/documents/upload")
+async def upload_document(
+    file: UploadFile = File(...),
+    session_id: str = Form(default="inspector-session"),
+):
+    """Upload a PDF; its text is used as context for the chatbot in this session."""
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+    content = await file.read()
+    if len(content) > 15 * 1024 * 1024:  # 15 MB
+        raise HTTPException(status_code=400, detail="File too large (max 15 MB).")
+    text = extract_text_from_pdf(content)
+    if not text:
+        raise HTTPException(status_code=400, detail="Could not extract text from PDF. The file may be scanned or corrupted.")
+    SESSION_DOCUMENTS[session_id] = {"filename": file.filename or "document.pdf", "text": text}
+    preview = text[:300].replace("\n", " ") + ("..." if len(text) > 300 else "")
+    return {"success": True, "filename": file.filename, "preview": preview, "char_count": len(text)}
+
+@api_router.delete("/documents")
+async def clear_document(session_id: str = "inspector-session"):
+    """Clear the uploaded document for this session."""
+    if session_id in SESSION_DOCUMENTS:
+        del SESSION_DOCUMENTS[session_id]
+    return {"success": True}
+
+@api_router.get("/documents/context")
+async def get_document_context(session_id: str = "inspector-session"):
+    """Return current document info for this session (for UI state)."""
+    doc = SESSION_DOCUMENTS.get(session_id)
+    if not doc:
+        return {"filename": None}
+    return {"filename": doc["filename"], "char_count": len(doc["text"])}
+
 # Chat endpoint
 @api_router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """Chat with AI assistant about inspection data"""
+    """Chat with AI assistant about inspection data and/or uploaded document"""
     try:
         openai_client = get_openai_client()
-        
-        # System message with context about the inspector's data
-        system_message = """You are Cat Inspect AI Assistant, an expert AI helper for Caterpillar equipment inspectors. 
+        session_id = request.session_id or "inspector-session"
+        doc = SESSION_DOCUMENTS.get(session_id)
+
+        if doc:
+            # Document context: short, plain-text structured responses (no Markdown)
+            system_message = """You are Cat Inspect AI Assistant. The user has uploaded a document (PDF) below. Use it to answer their questions.
+
+Response rules:
+- Use PLAIN TEXT only. Do not use Markdown: no asterisks for bold (no **), no # headers, no markdown links.
+- Structure your reply with clear section labels and line breaks. Format like this exactly:
+
+Key findings:
+- Finding one in a short line
+- Finding two
+- Finding three
+
+Top actions:
+- Action one
+- Action two
+
+Main risk: One short sentence here.
+
+- Keep each section short (2-5 bullets max). Use a blank line between sections. Bullets can use "- " at the start of the line.
+- When the user asks for a chart, graph, breakdown, or visualization: add a single JSON object in your reply with this exact format (numbers can be approximate): {"chart_type": "bar", "title": "Short chart title", "data": [{"category": "Label1", "count": 10}, {"category": "Label2", "count": 5}, ...]}. Use category and count. Up to 6–8 bars is fine. Keep the text reply short.
+
+--- BEGIN UPLOADED DOCUMENT ---
+"""
+            system_message += doc["text"]
+            system_message += "\n--- END UPLOADED DOCUMENT ---"
+            max_tokens = 600
+        else:
+            # Default: inspector context without document
+            system_message = """You are Cat Inspect AI Assistant, an expert AI helper for Caterpillar equipment inspectors. 
 You have access to the inspector's inspection data and can help with:
 - Summarizing inspections
 - Identifying recurring failures and patterns
@@ -485,47 +620,47 @@ Recent inspections summary:
 4. CAT 745 Articulated Truck - PASS (Jan 12)
 5. CAT 336 Excavator - In Progress (Jan 11)
 
-When asked for charts or visualizations, respond with a JSON object in your response that includes chart_type and data.
-For example, if asked about failure categories, include: {"chart_type": "bar", "data": [...], "title": "..."}
-
-Be concise, professional, and helpful. Focus on actionable insights."""
+When the user asks for a chart, graph, breakdown, or visualization: include a JSON object in your reply with this exact format (numbers can be simple/approximate): {"chart_type": "bar", "title": "Short chart title", "data": [{"category": "Label1", "count": 12}, {"category": "Label2", "count": 8}, ...]}. Use "category" and "count" only. 5–8 bars is enough. Keep your text reply brief.
+Use plain text only (no Markdown: no ** for bold, no # headers). Be concise, professional, and helpful. Focus on actionable insights."""
+            max_tokens = 500
 
         response = await openai_client.chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_CHAT_MODEL,
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": request.message}
             ],
-            max_tokens=500
+            max_tokens=max_tokens
         )
         
         response_text = response.choices[0].message.content
         
-        # Check if response contains chart data
-        chart_data = None
-        if "chart_type" in response_text.lower() or '"data"' in response_text:
-            import json
-            import re
-            # Try to extract JSON from response
-            json_match = re.search(r'\{[^{}]*"chart_type"[^{}]*\}', response_text, re.DOTALL)
-            if json_match:
-                try:
-                    chart_data = json.loads(json_match.group())
-                except:
-                    pass
-        
+        # Extract chart JSON if present (simple bar charts for UI)
+        chart_data = _extract_chart_json(response_text)
         return ChatResponse(response=response_text, chart_data=chart_data)
         
     except Exception as e:
-        logger.error(f"Chat error: {str(e)}")
-        # Fallback response
+        logger.error(f"Chat error: {str(e)}", exc_info=True)
+        session_id = request.session_id or "inspector-session"
+        doc = SESSION_DOCUMENTS.get(session_id)
+        msg_lower = request.message.lower()
+        asking_about_doc = doc and ("analyze" in msg_lower or "document" in msg_lower or "summarize" in msg_lower or "insight" in msg_lower or "risk" in msg_lower)
+
+        # If they have a document loaded and asked to analyze it, surface the real error
+        if asking_about_doc:
+            err_msg = str(e).replace("OpenAI:", "").strip()
+            if "invalid_api_key" in err_msg.lower() or "authentication" in err_msg.lower():
+                return ChatResponse(response="I couldn't analyze your document: the API key looks invalid. Please check OPENAI_API_KEY in backend/.env and restart the backend.")
+            if "context_length" in err_msg.lower() or "maximum context" in err_msg.lower():
+                return ChatResponse(response="Your document is too long for one analysis. Try uploading a shorter PDF or ask about a specific section.")
+            return ChatResponse(response=f"I couldn't analyze your document. Error: {err_msg[:200]}. Please check your API key and try again.")
+
+        # Fallback response (no document or generic question)
         fallback_responses = {
             "summarize": "Your last inspection was on CAT D6 Dozer (Jan 14) which failed due to a critical hydraulic leak in the main boom cylinder. Immediate repair is recommended before returning the equipment to service.",
             "failures": "Based on your recent inspections, the top recurring failures are: 1) Hydraulics (35%) - mainly hose wear and seal issues, 2) Engine (23%) - oil leaks and filter issues, 3) Electrical (17%) - wiring and sensor problems.",
             "chart": "Here's a breakdown of your failures by category over the last quarter."
         }
-        
-        msg_lower = request.message.lower()
         if "summarize" in msg_lower or "last" in msg_lower:
             return ChatResponse(response=fallback_responses["summarize"])
         elif "fail" in msg_lower or "recurring" in msg_lower:
@@ -542,7 +677,7 @@ Be concise, professional, and helpful. Focus on actionable insights."""
                 response=fallback_responses["chart"],
                 chart_data={
                     "chart_type": "bar",
-                    "title": "Failures by Category", 
+                    "title": "Failures by Category",
                     "data": MOCK_ANALYTICS["failed_parts"]
                 }
             )
@@ -582,7 +717,7 @@ If you don't see any clear issues, still provide a brief assessment.
 Be concise but thorough. Focus on actionable findings."""
 
         response = await openai_client.chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_CHAT_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
