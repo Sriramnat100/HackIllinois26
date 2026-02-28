@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, BarChart3, PanelRightClose, PanelRightOpen } from "lucide-react";
 import axios from "axios";
 import { InspectionTable } from "@/components/InspectionTable";
 import { ChatDock } from "@/components/ChatDock";
@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [inspections, setInspections] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -59,11 +60,11 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-slate-50 dark:bg-slate-950 page-enter" data-testid="dashboard-page">
+    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 page-enter" data-testid="dashboard-page">
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 p-5 h-full">
-        {/* Left Panel - Inspections Table */}
-        <div className="lg:col-span-8 flex flex-col h-full overflow-hidden pb-20 lg:pb-0">
+      <div className="flex h-full overflow-hidden">
+        {/* Main area - Inspections Table */}
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden pb-20 lg:pb-0 p-5 pr-0 lg:pr-2">
           <InspectionTable
             inspections={inspections}
             onSearch={handleSearch}
@@ -71,10 +72,45 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Right Panel - Analytics */}
-        <div className="lg:col-span-4 overflow-y-auto hidden lg:block pr-1">
-          <AnalyticsCards analytics={analytics} />
-        </div>
+        {/* Sidebar - Charts / Analytics (collapsible) */}
+        {sidebarOpen ? (
+          <aside
+            className="hidden lg:flex lg:flex-col w-[40%] min-w-[320px] max-w-[560px] shrink-0 border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+            data-testid="analytics-sidebar"
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                  <BarChart3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Analytics</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                className="p-1.5 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
+                aria-label="Close sidebar"
+              >
+                <PanelRightClose className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <AnalyticsCards analytics={analytics} />
+            </div>
+          </aside>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="hidden lg:flex flex-col items-center justify-center gap-1 w-11 shrink-0 border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors py-4"
+            aria-label="Open analytics sidebar"
+            title="Open Analytics"
+            data-testid="analytics-sidebar-open"
+          >
+            <PanelRightOpen className="w-5 h-5 text-slate-500 dark:text-white/90" />
+            <span className="text-[10px] font-medium text-slate-500 dark:text-white/90">Analytics</span>
+          </button>
+        )}
       </div>
 
       {/* Chatbot Dock - Bottom Left */}

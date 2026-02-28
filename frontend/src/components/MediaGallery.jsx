@@ -26,7 +26,7 @@ export const MediaGallery = ({ media = [] }) => {
             "h-9 px-3 text-[13px] font-medium",
             filter === "all" 
               ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" 
-              : "text-slate-500 dark:text-slate-400"
+              : "text-slate-500 dark:text-white"
           )}
           onClick={() => setFilter("all")}
           data-testid="filter-all"
@@ -41,7 +41,7 @@ export const MediaGallery = ({ media = [] }) => {
             "h-9 px-3 text-[13px] font-medium",
             filter === "photo" 
               ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" 
-              : "text-slate-500 dark:text-slate-400"
+              : "text-slate-500 dark:text-white"
           )}
           onClick={() => setFilter("photo")}
           data-testid="filter-photos"
@@ -56,7 +56,7 @@ export const MediaGallery = ({ media = [] }) => {
             "h-9 px-3 text-[13px] font-medium",
             filter === "video" 
               ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" 
-              : "text-slate-500 dark:text-slate-400"
+              : "text-slate-500 dark:text-white"
           )}
           onClick={() => setFilter("video")}
           data-testid="filter-videos"
@@ -119,10 +119,10 @@ export const MediaGallery = ({ media = [] }) => {
       {filteredMedia.length === 0 && (
         <div className="text-center py-16">
           <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
-            <ImageIcon className="w-7 h-7 text-slate-300 dark:text-slate-600" />
+            <ImageIcon className="w-7 h-7 text-slate-300 dark:text-white/70" />
           </div>
-          <p className="text-[14px] font-medium text-slate-500 dark:text-slate-400">No media found</p>
-          <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-1">Capture photos and videos during inspection</p>
+          <p className="text-[14px] font-medium text-slate-500 dark:text-white">No media found</p>
+          <p className="text-[12px] text-slate-400 dark:text-white/90 mt-1">Capture photos and videos during inspection</p>
         </div>
       )}
     </div>
