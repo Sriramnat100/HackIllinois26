@@ -48,13 +48,13 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-              <ClipboardList className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              <ClipboardList className="w-5 h-5 text-slate-600 dark:text-white" />
             </div>
             <div>
               <h2 className="text-[16px] font-semibold text-slate-900 dark:text-white">
                 Previous Inspections
               </h2>
-              <p className="text-[12px] text-slate-500 dark:text-slate-400">
+              <p className="text-[12px] text-slate-500 dark:text-white/90">
                 {inspections.length} records
               </p>
             </div>
@@ -73,7 +73,7 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/80" />
             <Input
               placeholder="Search by model, serial, or customer..."
               value={searchTerm}
@@ -84,7 +84,7 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
           </div>
           <Select value={statusFilter} onValueChange={handleStatusFilter}>
             <SelectTrigger className="w-[150px] h-10 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[13px]" data-testid="status-filter">
-              <SlidersHorizontal className="w-4 h-4 mr-2 text-slate-400" />
+              <SlidersHorizontal className="w-4 h-4 mr-2 text-slate-400 dark:text-white/80" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -115,11 +115,13 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
         <table className="table-enterprise">
           <thead>
             <tr>
-              <th className="w-[35%]">Equipment</th>
-              <th className="w-[15%]">Date</th>
-              <th className="w-[12%]">Report</th>
-              <th className="w-[15%]">Status</th>
-              <th className="w-[23%]">Actions</th>
+              <th className="w-[14%]">Asset ID</th>
+              <th className="w-[18%]">Owning org</th>
+              <th className="w-[22%]">Equipment</th>
+              <th className="w-[10%]">Date</th>
+              <th className="w-[10%]">Report</th>
+              <th className="w-[12%]">Status</th>
+              <th className="w-[14%]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -131,24 +133,34 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
                 data-testid={`inspection-row-${inspection.id}`}
               >
                 <td>
+                  <span className="text-[13px] font-mono text-slate-700 dark:text-white">
+                    {inspection.asset_id ?? inspection.serial_number}
+                  </span>
+                </td>
+                <td>
+                  <span className="text-[13px] text-slate-600 dark:text-white">
+                    {inspection.owning_org ?? inspection.customer}
+                  </span>
+                </td>
+                <td>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-[#F7B500]/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-[11px] font-bold text-[#F7B500]">
-                        {inspection.equipment_model.split(' ')[1]?.substring(0, 3) || 'CAT'}
+                        {inspection.equipment_model?.split(' ')[1]?.substring(0, 3) || 'CAT'}
                       </span>
                     </div>
                     <div>
                       <p className="font-semibold text-[14px] text-slate-900 dark:text-white group-hover:text-[#F7B500] transition-colors">
                         {inspection.equipment_model}
                       </p>
-                      <p className="text-[12px] text-slate-500 dark:text-slate-400 font-mono">
+                      <p className="text-[12px] text-slate-500 dark:text-white/90 font-mono">
                         {inspection.serial_number}
                       </p>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span className="text-[13px] text-slate-600 dark:text-slate-400">
+                  <span className="text-[13px] text-slate-600 dark:text-white">
                     {inspection.date}
                   </span>
                 </td>
@@ -156,7 +168,7 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-slate-400 hover:text-[#F7B500] hover:bg-[#F7B500]/10"
+                    className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-white hover:text-[#F7B500] hover:bg-[#F7B500]/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/app/inspections/${inspection.id}`);
@@ -175,7 +187,7 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-slate-400 hover:text-[#F7B500] hover:bg-[#F7B500]/10"
+                      className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-white hover:text-[#F7B500] hover:bg-[#F7B500]/10"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/app/inspections/${inspection.id}?tab=connect`);
@@ -185,18 +197,18 @@ export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
                       <Link2 className="w-4 h-4 mr-1" />
                       Similar
                     </Button>
-                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-white/70 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </td>
               </tr>
             ))}
             {inspections.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-12">
+                <td colSpan={7} className="text-center py-12">
                   <div className="flex flex-col items-center">
-                    <ClipboardList className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-3" />
-                    <p className="text-[14px] text-slate-500 dark:text-slate-400">No inspections found</p>
-                    <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-1">Try adjusting your filters</p>
+                    <ClipboardList className="w-10 h-10 text-slate-300 dark:text-white/70 mb-3" />
+                    <p className="text-[14px] text-slate-500 dark:text-white/90">No inspections found</p>
+                    <p className="text-[12px] text-slate-400 dark:text-white/90 mt-1">Try adjusting your filters</p>
                   </div>
                 </td>
               </tr>

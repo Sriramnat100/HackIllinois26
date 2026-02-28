@@ -39,7 +39,7 @@ export const AnalyticsCards = ({ analytics }) => {
             <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white">
               Top Failure Categories
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Last 90 days</p>
+            <p className="text-[11px] text-slate-500 dark:text-white/90">Last 90 days</p>
           </div>
         </div>
         <div className="px-4 pt-3 pb-1">
@@ -97,7 +97,7 @@ export const AnalyticsCards = ({ analytics }) => {
             <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white">
               Inspection Volume
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">6 month trend</p>
+            <p className="text-[11px] text-slate-500 dark:text-white/90">6 month trend</p>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
             <ArrowUp className="w-3 h-3" />
@@ -154,7 +154,7 @@ export const AnalyticsCards = ({ analytics }) => {
             <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white">
               Inspection Outcomes
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">All time distribution</p>
+            <p className="text-[11px] text-slate-500 dark:text-white/90">All time distribution</p>
           </div>
         </div>
         <div className="px-4 py-3">
@@ -193,7 +193,7 @@ export const AnalyticsCards = ({ analytics }) => {
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: COLORS[index] }}
                     />
-                    <span className="text-[12px] text-slate-600 dark:text-slate-400">
+                    <span className="text-[12px] text-slate-600 dark:text-white">
                       {item.name}
                     </span>
                   </div>
