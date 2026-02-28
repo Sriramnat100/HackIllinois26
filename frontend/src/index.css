@@ -1,0 +1,794 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ========================================
+   CAT INSPECT AI - ENTERPRISE DESIGN SYSTEM
+   ======================================== */
+
+/* Design Tokens */
+:root {
+  /* Brand Colors - CAT Inspired */
+  --cat-yellow: #F7B500;
+  --cat-yellow-hover: #E5A800;
+  --cat-yellow-subtle: rgba(247, 181, 0, 0.08);
+  --cat-yellow-muted: rgba(247, 181, 0, 0.15);
+  
+  /* Neutral Scale - Refined Slate */
+  --slate-50: #F8FAFC;
+  --slate-100: #F1F5F9;
+  --slate-200: #E2E8F0;
+  --slate-300: #CBD5E1;
+  --slate-400: #94A3B8;
+  --slate-500: #64748B;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1E293B;
+  --slate-900: #0F172A;
+  
+  /* Status Colors - Industrial */
+  --status-pass: #059669;
+  --status-pass-bg: rgba(5, 150, 105, 0.1);
+  --status-fail: #DC2626;
+  --status-fail-bg: rgba(220, 38, 38, 0.1);
+  --status-monitor: #D97706;
+  --status-monitor-bg: rgba(217, 119, 6, 0.1);
+  --status-progress: #2563EB;
+  --status-progress-bg: rgba(37, 99, 235, 0.1);
+  --status-draft: #64748B;
+  --status-draft-bg: rgba(100, 116, 139, 0.1);
+  --status-submitted: #7C3AED;
+  --status-submitted-bg: rgba(124, 58, 237, 0.1);
+}
+
+/* Dark Mode Tokens */
+.dark {
+  --background: 222 47% 8%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 45 100% 48%;
+  --primary-foreground: 222 47% 8%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 45 100% 48%;
+  --accent-foreground: 222 47% 8%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --ring: 45 100% 48%;
+  
+  --slate-50: #0F172A;
+  --slate-100: #1E293B;
+  --slate-200: #334155;
+  --slate-300: #475569;
+  --slate-400: #64748B;
+  --slate-500: #94A3B8;
+  --slate-600: #CBD5E1;
+  --slate-700: #E2E8F0;
+  --slate-800: #F1F5F9;
+  --slate-900: #F8FAFC;
+}
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 45 100% 48%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 45 100% 48%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 45 100% 48%;
+    --radius: 0.75rem;
+  }
+  
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+}
+
+/* ========================================
+   TYPOGRAPHY SYSTEM
+   ======================================== */
+
+.text-page-title {
+  @apply text-[22px] font-semibold tracking-tight text-slate-900;
+}
+
+.dark .text-page-title {
+  @apply text-slate-100;
+}
+
+.text-section-title {
+  @apply text-[15px] font-semibold text-slate-800;
+}
+
+.dark .text-section-title {
+  @apply text-slate-200;
+}
+
+.text-body {
+  @apply text-[14px] text-slate-700 leading-relaxed;
+}
+
+.dark .text-body {
+  @apply text-slate-300;
+}
+
+.text-secondary {
+  @apply text-[13px] text-slate-500;
+}
+
+.dark .text-secondary {
+  @apply text-slate-400;
+}
+
+.text-meta {
+  @apply text-[12px] text-slate-400 font-medium;
+}
+
+.dark .text-meta {
+  @apply text-slate-500;
+}
+
+/* ========================================
+   SCROLLBAR - REFINED
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-400);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--slate-600);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-500);
+}
+
+/* ========================================
+   CARD SYSTEM - ENTERPRISE
+   ======================================== */
+
+.card-enterprise {
+  @apply bg-white rounded-xl border border-slate-200/80 shadow-sm;
+  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
+}
+
+.card-enterprise:hover {
+  @apply shadow-md;
+  transform: translateY(-1px);
+}
+
+.dark .card-enterprise {
+  @apply bg-slate-900 border-slate-700/50;
+}
+
+.card-header-enterprise {
+  @apply px-5 py-4 border-b border-slate-100;
+}
+
+.dark .card-header-enterprise {
+  @apply border-slate-800;
+}
+
+/* ========================================
+   TABLE SYSTEM - IMPROVED
+   ======================================== */
+
+.table-enterprise {
+  @apply w-full;
+}
+
+.table-enterprise thead tr {
+  @apply border-b border-slate-200;
+}
+
+.dark .table-enterprise thead tr {
+  @apply border-slate-700;
+}
+
+.table-enterprise th {
+  @apply px-4 py-3 text-left text-[12px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/50;
+}
+
+.dark .table-enterprise th {
+  @apply text-slate-400 bg-slate-800/50;
+}
+
+.table-enterprise td {
+  @apply px-4 py-4 text-[13px] text-slate-700;
+}
+
+.dark .table-enterprise td {
+  @apply text-slate-300;
+}
+
+.table-enterprise tbody tr {
+  @apply border-b border-slate-100 transition-colors duration-150;
+}
+
+.dark .table-enterprise tbody tr {
+  @apply border-slate-800;
+}
+
+.table-enterprise tbody tr:hover {
+  @apply bg-slate-50;
+}
+
+.dark .table-enterprise tbody tr:hover {
+  @apply bg-slate-800/50;
+}
+
+.table-enterprise tbody tr:last-child {
+  @apply border-b-0;
+}
+
+/* Row clickable indicator */
+.table-row-clickable {
+  @apply cursor-pointer;
+}
+
+.table-row-clickable:hover {
+  background-color: rgba(247, 181, 0, 0.08);
+}
+
+/* ========================================
+   BUTTON SYSTEM - PREMIUM
+   ======================================== */
+
+.btn-primary-cat {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-[14px];
+  @apply bg-[#F7B500] text-slate-900 shadow-sm;
+  transition: background-color 0.15s ease-out, transform 0.1s ease-out, box-shadow 0.15s ease-out;
+}
+
+.btn-primary-cat:hover {
+  @apply bg-[#E5A800];
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(247, 181, 0, 0.25);
+}
+
+.btn-primary-cat:active {
+  transform: translateY(0);
+}
+
+.btn-secondary-cat {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-[14px];
+  @apply bg-white text-slate-700 border border-slate-200 shadow-sm;
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+}
+
+.btn-secondary-cat:hover {
+  @apply bg-slate-50 border-slate-300;
+}
+
+.dark .btn-secondary-cat {
+  @apply bg-slate-800 text-slate-200 border-slate-700;
+}
+
+.dark .btn-secondary-cat:hover {
+  @apply bg-slate-700 border-slate-600;
+}
+
+/* ========================================
+   STATUS BADGES - CONSISTENT
+   ======================================== */
+
+.badge-status {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide;
+  transition: transform 0.1s ease-out;
+}
+
+.badge-status:hover {
+  transform: scale(1.02);
+}
+
+.badge-pass {
+  @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+.dark .badge-pass {
+  @apply bg-emerald-900/30 text-emerald-400 border-emerald-800;
+}
+
+.badge-fail {
+  @apply bg-red-50 text-red-700 border border-red-200;
+}
+
+.dark .badge-fail {
+  @apply bg-red-900/30 text-red-400 border-red-800;
+}
+
+.badge-monitor {
+  @apply bg-amber-50 text-amber-700 border border-amber-200;
+}
+
+.dark .badge-monitor {
+  @apply bg-amber-900/30 text-amber-400 border-amber-800;
+}
+
+.badge-progress {
+  @apply bg-blue-50 text-blue-700 border border-blue-200;
+}
+
+.dark .badge-progress {
+  @apply bg-blue-900/30 text-blue-400 border-blue-800;
+}
+
+.badge-draft {
+  @apply bg-slate-100 text-slate-600 border border-slate-200;
+}
+
+.dark .badge-draft {
+  @apply bg-slate-800 text-slate-400 border-slate-700;
+}
+
+.badge-submitted {
+  @apply bg-violet-50 text-violet-700 border border-violet-200;
+}
+
+.dark .badge-submitted {
+  @apply bg-violet-900/30 text-violet-400 border-violet-800;
+}
+
+/* Severity Badges */
+.badge-severity {
+  @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold uppercase;
+}
+
+.badge-severity-high {
+  @apply bg-red-100 text-red-800;
+}
+
+.dark .badge-severity-high {
+  @apply bg-red-900/40 text-red-300;
+}
+
+.badge-severity-medium {
+  @apply bg-amber-100 text-amber-800;
+}
+
+.dark .badge-severity-medium {
+  @apply bg-amber-900/40 text-amber-300;
+}
+
+.badge-severity-low {
+  @apply bg-emerald-100 text-emerald-800;
+}
+
+.dark .badge-severity-low {
+  @apply bg-emerald-900/40 text-emerald-300;
+}
+
+/* ========================================
+   FLOATING ACTION BUTTON - PREMIUM
+   ======================================== */
+
+.fab-enterprise {
+  @apply fixed bottom-6 right-6 z-50;
+  @apply w-14 h-14 rounded-full;
+  @apply bg-[#F7B500] text-slate-900;
+  @apply flex items-center justify-center;
+  @apply shadow-lg;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.15s ease-out;
+}
+
+.fab-enterprise:hover {
+  @apply bg-[#E5A800];
+  transform: scale(1.08);
+  box-shadow: 0 8px 30px rgba(247, 181, 0, 0.4);
+}
+
+.fab-enterprise:active {
+  transform: scale(1.02);
+}
+
+/* Tooltip for FAB */
+.fab-tooltip {
+  @apply absolute right-full mr-3 px-3 py-1.5 rounded-lg;
+  @apply bg-slate-900 text-white text-[13px] font-medium whitespace-nowrap;
+  @apply opacity-0 pointer-events-none;
+  transition: opacity 0.15s ease-out;
+}
+
+.fab-enterprise:hover .fab-tooltip {
+  @apply opacity-100;
+}
+
+.dark .fab-tooltip {
+  @apply bg-slate-100 text-slate-900;
+}
+
+/* ========================================
+   CHAT DOCK - PREMIUM INTEGRATION
+   ======================================== */
+
+.chat-dock-enterprise {
+  @apply bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden;
+}
+
+.dark .chat-dock-enterprise {
+  @apply bg-slate-900 border-slate-700;
+}
+
+.chat-header-enterprise {
+  @apply flex items-center justify-between px-4 py-3;
+  @apply bg-gradient-to-r from-slate-50 to-white border-b border-slate-100;
+}
+
+.dark .chat-header-enterprise {
+  @apply from-slate-800 to-slate-900 border-slate-700;
+}
+
+.chat-bubble-user {
+  @apply bg-[#F7B500] text-slate-900 rounded-2xl rounded-br-md px-4 py-2.5;
+}
+
+.chat-bubble-assistant {
+  @apply bg-slate-100 text-slate-800 rounded-2xl rounded-bl-md px-4 py-2.5;
+}
+
+.dark .chat-bubble-assistant {
+  @apply bg-slate-800 text-slate-200;
+}
+
+.chat-chip {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium;
+  @apply bg-white border border-slate-200 text-slate-600;
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+}
+
+.chat-chip:hover {
+  @apply bg-[#F7B500]/10 border-[#F7B500] text-slate-800;
+}
+
+.dark .chat-chip {
+  @apply bg-slate-800 border-slate-700 text-slate-300;
+}
+
+.dark .chat-chip:hover {
+  @apply bg-[#F7B500]/20 border-[#F7B500]/50 text-slate-100;
+}
+
+/* ========================================
+   ANALYTICS CARDS - REFINED
+   ======================================== */
+
+.analytics-card {
+  @apply bg-white rounded-xl border border-slate-200/80 overflow-hidden;
+}
+
+.dark .analytics-card {
+  @apply bg-slate-900 border-slate-700/50;
+}
+
+.analytics-header {
+  @apply flex items-center gap-2 px-4 py-3 border-b border-slate-100;
+}
+
+.dark .analytics-header {
+  @apply border-slate-800;
+}
+
+.analytics-insight {
+  @apply text-[11px] text-slate-500 mt-2 px-4 pb-3;
+}
+
+.dark .analytics-insight {
+  @apply text-slate-400;
+}
+
+/* ========================================
+   LIVE INSPECTION - MISSION CRITICAL
+   ======================================== */
+
+.live-overlay-header {
+  @apply absolute top-0 left-0 right-0 z-20;
+  @apply px-4 py-3;
+  @apply bg-gradient-to-b from-black/60 via-black/30 to-transparent;
+}
+
+.live-equipment-badge {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg;
+  @apply bg-white/15 backdrop-blur-md text-white text-[13px] font-medium;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.live-control-bar {
+  @apply bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50;
+  @apply px-4 py-4;
+}
+
+.live-control-btn {
+  @apply w-14 h-14 rounded-full flex items-center justify-center;
+  @apply transition-all duration-150;
+}
+
+.live-control-btn-primary {
+  @apply bg-[#F7B500] text-slate-900;
+}
+
+.live-control-btn-primary:hover {
+  @apply bg-[#E5A800];
+  transform: scale(1.05);
+}
+
+.live-control-btn-secondary {
+  @apply bg-slate-800 text-white border border-slate-600;
+}
+
+.live-control-btn-secondary:hover {
+  @apply bg-slate-700 border-slate-500;
+}
+
+.live-control-btn-danger {
+  @apply bg-red-600 text-white;
+}
+
+.live-control-btn-danger:hover {
+  @apply bg-red-700;
+}
+
+.live-quick-mark {
+  @apply px-4 py-2 rounded-full text-[13px] font-semibold;
+  @apply flex items-center gap-1.5;
+  @apply transition-all duration-150;
+}
+
+.live-quick-mark:hover {
+  transform: scale(1.03);
+}
+
+/* Streaming Indicator - Premium */
+.streaming-badge {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full;
+  @apply bg-red-600 text-white text-[12px] font-semibold uppercase tracking-wide;
+  animation: streaming-pulse 2s ease-in-out infinite;
+}
+
+@keyframes streaming-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.streaming-dot {
+  @apply w-2 h-2 rounded-full bg-white;
+  animation: streaming-blink 1s ease-in-out infinite;
+}
+
+@keyframes streaming-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Findings Timeline - Structured */
+.finding-item {
+  @apply p-4 rounded-lg border;
+  @apply transition-all duration-150;
+  animation: finding-slide-in 0.3s ease-out;
+}
+
+@keyframes finding-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.finding-item-high {
+  @apply bg-red-50 border-red-200;
+}
+
+.dark .finding-item-high {
+  @apply bg-red-900/20 border-red-800;
+}
+
+.finding-item-medium {
+  @apply bg-amber-50 border-amber-200;
+}
+
+.dark .finding-item-medium {
+  @apply bg-amber-900/20 border-amber-800;
+}
+
+.finding-item-low {
+  @apply bg-slate-50 border-slate-200;
+}
+
+.dark .finding-item-low {
+  @apply bg-slate-800/50 border-slate-700;
+}
+
+/* ========================================
+   TAB SYSTEM - CLEAR ACTIVE STATE
+   ======================================== */
+
+.tab-enterprise {
+  @apply relative px-4 py-2 text-[14px] font-medium;
+  @apply text-slate-500 transition-colors duration-150;
+}
+
+.tab-enterprise:hover {
+  @apply text-slate-700;
+}
+
+.dark .tab-enterprise:hover {
+  @apply text-slate-300;
+}
+
+.tab-enterprise[data-state="active"] {
+  @apply text-slate-900;
+}
+
+.dark .tab-enterprise[data-state="active"] {
+  @apply text-white;
+}
+
+.tab-enterprise[data-state="active"]::after {
+  content: '';
+  @apply absolute bottom-0 left-0 right-0 h-0.5 bg-[#F7B500];
+}
+
+/* ========================================
+   PARTS MATCH - STRUCTURED
+   ======================================== */
+
+.parts-match-card {
+  @apply bg-white rounded-xl border border-slate-200 p-4;
+  @apply transition-all duration-150;
+}
+
+.parts-match-card:hover {
+  @apply border-slate-300 shadow-sm;
+}
+
+.dark .parts-match-card {
+  @apply bg-slate-900 border-slate-700;
+}
+
+.dark .parts-match-card:hover {
+  @apply border-slate-600;
+}
+
+.parts-match-best {
+  @apply ring-2 ring-[#F7B500]/30;
+}
+
+.fitment-bar {
+  @apply h-1.5 rounded-full bg-slate-200 overflow-hidden;
+}
+
+.fitment-bar-fill {
+  @apply h-full rounded-full bg-emerald-500;
+  transition: width 0.3s ease-out;
+}
+
+/* ========================================
+   MICRO-INTERACTIONS
+   ======================================== */
+
+/* Smooth page transitions */
+.page-enter {
+  animation: page-fade-in 0.2s ease-out;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card hover lift */
+.hover-lift {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Button press */
+.press-effect:active {
+  transform: scale(0.98);
+}
+
+/* Loading spinner - CAT Yellow */
+.spinner-cat {
+  @apply w-8 h-8 rounded-full;
+  border-width: 3px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  border-top-color: #F7B500;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   UTILITIES
+   ======================================== */
+
+/* Touch targets for field use */
+.touch-target-lg {
+  @apply min-h-[48px] min-w-[48px];
+}
+
+/* Glass effect */
+.glass-light {
+  @apply bg-white/80 backdrop-blur-lg;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+  @apply bg-slate-900/80 backdrop-blur-lg;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Gradient overlays */
+.gradient-fade-up {
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+}
+
+.gradient-fade-down {
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
+}
+
+/* Debug wrapper fix */
+@layer base {
+  [data-debug-wrapper="true"] {
+    display: contents !important;
+  }
+}
