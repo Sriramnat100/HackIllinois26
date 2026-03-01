@@ -40,67 +40,67 @@ The app is built with a **React (Create React App + Craco)** frontend and a **Fa
 
 Modern landing page for the Caterpillar Vision AI platform showcasing the core value proposition: AI-powered equipment inspections with real-time analytics and automated reporting. The design emphasizes safety, efficiency, and seamless integration with inspection workflows.
 
-![Landing Page](./Pictures/Screenshot%202026-03-01%20at%205.02.37%20AM.png)
+![Landing Page](Pictures/01-landing.png)
 
 ### 2. Dashboard Overview
 
 Main dashboard displaying recent equipment inspections, including asset details, status (Pass/Fail/Monitor), and report access. It also provides high-level analytics such as top failure categories, inspection volume trends, and outcome distribution.
 
-![Dashboard Overview](./Pictures/Screenshot%202026-03-01%20at%205.02.55%20AM.png)
+![Dashboard Overview](Pictures/02-dashboard.png)
 
 ### 3. Hydraulics Detailed Analytics
 
 Detailed analytics view for a specific failure category, showing total failures, trends over time, and checklist breakdown by component. This helps teams identify common failure points and prioritize maintenance actions.
 
-![Hydraulics Detailed Analytics](./Pictures/Screenshot%202026-03-01%20at%205.03.02%20AM.png)
+![Hydraulics Detailed Analytics](Pictures/03-hydraulics-analytics.png)
 
 ### 4. Global Severity Distribution
 
 Global heatmap visualizing inspection severity distribution across regions to highlight geographic risk patterns. The dashboard also surfaces recommended maintenance actions and recent critical inspection findings.
 
-![Global Severity Distribution](./Pictures/Screenshot%202026-03-01%20at%205.03.21%20AM.png)
+![Global Severity Distribution](Pictures/04-severity-heatmap.png)
 
 ### 5. U.S. Regional Drill-Down
 
 State-level drill-down view enabling deeper analysis of inspection severity within the United States. This allows fleet managers to identify localized issues and allocate maintenance resources strategically.
 
-![U.S. Regional Drill-Down](./Pictures/Screenshot%202026-03-01%20at%205.03.28%20AM.png)
+![U.S. Regional Drill-Down](Pictures/05-regional-drilldown.png)
 
 ### 6. Inspection Checklist Results
 
 Comprehensive checklist view showing inspection results for each component, including pass/fail status, severity level, evidence, and AI-recommended actions. Confidence scores provide transparency into AI-generated recommendations.
 
-![Inspection Checklist Results](./Pictures/Screenshot%202026-03-01%20at%205.03.42%20AM.png)
+![Inspection Checklist Results](Pictures/06-checklist-results.png)
 
 ### 7. Parts Recommendation System
 
 AI-powered parts recommendation interface suggesting replacement components with fitment certainty scores. This enables inspectors to quickly order correct parts and streamline repair workflows.
 
-![Parts Recommendation System](./Pictures/Screenshot%202026-03-01%20at%205.03.49%20AM.png)
+![Parts Recommendation System](Pictures/07-parts-recommendation.png)
 
 ### 8. Executive Summary Report
 
 Automatically generated inspection summary highlighting key findings, maintenance recommendations, and safety insights. This provides stakeholders with a clear overview of equipment condition and required actions.
 
-![Executive Summary Report](./Pictures/Screenshot%202026-03-01%20at%205.04.06%20AM.png)
+![Executive Summary Report](Pictures/08-executive-summary.png)
 
 ### 9. Similar Issue Detection
 
 AI-driven similarity detection showing related past inspection issues across equipment. This helps teams identify recurring problems and improve preventive maintenance planning.
 
-![Similar Issue Detection](./Pictures/Screenshot%202026-03-01%20at%205.04.14%20AM.png)
+![Similar Issue Detection](Pictures/09-similar-issues.png)
 
 ### 10. AI-Generated Issue Resolution Details
 
 Detailed report explaining detected issues, root causes, and step-by-step resolution actions taken. This creates a complete audit trail and supports operational transparency and compliance.
 
-![AI-Generated Issue Resolution Details](./Pictures/Screenshot%202026-03-01%20at%205.04.20%20AM.png)
+![AI-Generated Issue Resolution Details](Pictures/10-issue-resolution.png)
 
 ### 11. AI Chatbot Agent
 
 The in-app AI assistant supports inspection-related questions, failure summaries, chart generation, and document (PDF) upload for summarization and insights. It is available from the dashboard and other authenticated views.
 
-![AI Chatbot Agent](./Pictures/Screenshot%202026-03-01%20at%205.04.53%20AM.png)
+![AI Chatbot Agent](Pictures/11-chatbot-agent.png)
 
 ---
 
