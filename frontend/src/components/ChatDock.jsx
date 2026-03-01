@@ -24,8 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import axios from "axios";
-
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL } from "@/config";
 
 const suggestedPrompts = [
   { text: "Summarize my last inspection", icon: Sparkles },

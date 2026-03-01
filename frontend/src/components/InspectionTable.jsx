@@ -10,6 +10,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
   Dialog,
   DialogContent,
   DialogHeader,
@@ -22,7 +35,10 @@ import {
   Search, 
   SlidersHorizontal, 
   Download, 
+  FileText, 
+  FileSpreadsheet,
   Link2,
+  ChevronDown,
   ChevronRight,
   ClipboardList,
   Plus
@@ -37,11 +53,17 @@ const defaultNewRow = {
   inspection_type: "Daily Walkaround",
 };
 
+const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
 export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [selectedInspectionId, setSelectedInspectionId] = useState("");
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newRow, setNewRow] = useState(defaultNewRow);
   const [submitting, setSubmitting] = useState(false);
@@ -80,6 +102,70 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
     onFilter?.({ status: statusFilter, type: value });
   };
 
+  const handleExportPdfClick = () => {
+    setSelectedInspectionId(inspections.length ? inspections[0].id : "");
+    setPdfDialogOpen(true);
+  };
+
+  const handleDownloadPdf = () => {
+    if (!selectedInspectionId) return;
+    setExportingPdf(true);
+    const url = `${API_URL}/export/inspection/${encodeURIComponent(selectedInspectionId)}/pdf`;
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error("Export failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `inspection-report-${selectedInspectionId}.pdf`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        setPdfDialogOpen(false);
+      })
+      .catch(() => setExportingPdf(false))
+      .finally(() => setExportingPdf(false));
+  };
+
+  const handleExportAllCsv = () => {
+    const url = `${API_URL}/export/all`;
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error("Export failed");
+        return res.text();
+      })
+      .then((text) => {
+        const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "cat-inspect-export-all.csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch(console.error);
+  };
+
+  const handleExportAllExcel = () => {
+    const url = `${API_URL}/export/all/excel`;
+    fetch(url, { method: "GET" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Export failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        const urlObj = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = urlObj;
+        a.download = "cat-inspect-export-all.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(urlObj), 2000);
+      })
+      .catch(() => {
+        window.open(url, "_blank");
+      });
   const handleExport = () => {
     const headers = ["Asset ID", "Owning Org", "Equipment Model", "Serial Number", "Customer", "Location", "Date", "Status", "Inspection Type"];
     const rows = inspections.map((i) => [
@@ -126,6 +212,34 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
               </p>
             </div>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-fit h-9 text-[13px] font-medium border-slate-200 dark:border-slate-700"
+                data-testid="export-btn"
+              >
+                <Download className="w-4 h-4 mr-1.5" />
+                Export
+                <ChevronDown className="w-4 h-4 ml-1 opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[260px]">
+              <DropdownMenuItem onClick={handleExportPdfClick}>
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF (single report)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportAllCsv}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export All – CSV (more detail, for Google Sheets)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportAllExcel}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export All – Excel (with charts)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -374,6 +488,40 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
           </tbody>
         </table>
       </div>
+
+      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export report as PDF</DialogTitle>
+            <DialogDescription>
+              Choose an inspection to download as a PDF report. The file includes summary, findings, checklist, and action items.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Inspection</label>
+            <Select value={selectedInspectionId} onValueChange={setSelectedInspectionId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select inspection" />
+              </SelectTrigger>
+              <SelectContent>
+                {inspections.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>
+                    {i.equipment_model} – {i.date} ({i.status})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPdfDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleDownloadPdf} disabled={!selectedInspectionId || exportingPdf}>
+              {exportingPdf ? "Downloading…" : "Download PDF"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

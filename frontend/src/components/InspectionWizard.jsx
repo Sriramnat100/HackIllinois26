@@ -20,6 +20,9 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Check, ChevronLeft, ChevronRight, ClipboardCheck, Shield, Wrench, Truck, MapPin, Building2, Play, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import axios from "axios";
+import { toast } from "sonner";
+import { API_URL } from "@/config";
 
 const EQUIPMENT_OPTIONS = [
   { model: "CAT 320 Excavator", serial: "CAT0320X", type: "Excavator" },
@@ -112,9 +115,31 @@ export const InspectionWizard = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
-      const mockId = `insp-${Date.now().toString(36)}`;
-      navigate(`/app/inspections/${mockId}/live`);
+      startInspection();
     }
+  };
+
+  const startInspection = async () => {
+    try {
+      const response = await axios.post(`${API_URL}/inspections`, {
+        equipment_model: formData.equipment_model,
+        serial_number: formData.serial_number,
+        customer: formData.customer,
+        location: formData.location,
+        inspection_type: formData.inspection_type,
+      });
+      const inspectionId = response.data?.id;
+      if (inspectionId) {
+        navigate(`/app/inspections/${inspectionId}/live`);
+        return;
+      }
+    } catch (error) {
+      console.error("Error creating inspection:", error);
+      toast.error("Backend unavailable — opening live inspection without saving. Report may not load after finishing.");
+    }
+    // Fallback: use client-side id so user can still use live flow (detail may show "not found" later)
+    const fallbackId = `insp-${Date.now().toString(36)}`;
+    navigate(`/app/inspections/${fallbackId}/live`);
   };
 
   const handleBack = () => {

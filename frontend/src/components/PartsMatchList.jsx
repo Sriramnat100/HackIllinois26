@@ -81,6 +81,7 @@ export const PartsMatchList = ({ parts = [] }) => {
             
             {/* Add to Order Button */}
             <Button
+              asChild
               className={cn(
                 "flex-shrink-0",
                 index === 0 
@@ -89,8 +90,14 @@ export const PartsMatchList = ({ parts = [] }) => {
               )}
               data-testid={`add-part-${part.id}`}
             >
-              <ShoppingCart className="w-4 h-4 mr-1.5" />
-              Add to Order
+              <a
+                href={`https://www.amazon.com/s?k=${encodeURIComponent([part.part_number, part.part_name].filter(Boolean).join(" "))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ShoppingCart className="w-4 h-4 mr-1.5" />
+                Add to Order
+              </a>
             </Button>
           </div>
         </div>
