@@ -10,8 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Check, ChevronLeft, ChevronRight, ClipboardCheck, Shield, Wrench, Truck, MapPin, Building2, Play } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ClipboardCheck, Shield, Wrench, Truck, MapPin, Building2, Play, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { toast } from "sonner";
@@ -63,6 +70,10 @@ const steps = [
 export const InspectionWizard = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [equipmentOptions, setEquipmentOptions] = useState(EQUIPMENT_OPTIONS);
+  const [addEquipmentOpen, setAddEquipmentOpen] = useState(false);
+  const [newEquipmentModel, setNewEquipmentModel] = useState("");
+  const [newEquipmentSerialPrefix, setNewEquipmentSerialPrefix] = useState("CUSTOM");
   const [formData, setFormData] = useState({
     equipment_model: "",
     serial_number: "",
@@ -72,7 +83,7 @@ export const InspectionWizard = () => {
   });
 
   const handleEquipmentSelect = (model) => {
-    const equipment = EQUIPMENT_OPTIONS.find((e) => e.model === model);
+    const equipment = equipmentOptions.find((e) => e.model === model);
     if (equipment) {
       setFormData((prev) => ({
         ...prev,
@@ -80,6 +91,24 @@ export const InspectionWizard = () => {
         serial_number: equipment.serial + Math.random().toString().slice(2, 7),
       }));
     }
+  };
+
+  const handleAddEquipment = (e) => {
+    e.preventDefault();
+    const model = newEquipmentModel.trim();
+    if (!model) return;
+    const prefix = newEquipmentSerialPrefix.trim() || "CUSTOM";
+    const serial = prefix + Math.random().toString().slice(2, 7);
+    const newEntry = { model, serial: prefix, type: "Other" };
+    setEquipmentOptions((prev) => [...prev, newEntry]);
+    setFormData((prev) => ({
+      ...prev,
+      equipment_model: model,
+      serial_number: serial,
+    }));
+    setNewEquipmentModel("");
+    setNewEquipmentSerialPrefix("CUSTOM");
+    setAddEquipmentOpen(false);
   };
 
   const handleNext = () => {
@@ -142,12 +171,12 @@ export const InspectionWizard = () => {
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
-                    "w-11 h-11 rounded-xl flex items-center justify-center text-[14px] font-bold transition-all duration-200",
+                    "icon-glass w-11 h-11 rounded-xl flex items-center justify-center text-[14px] font-bold transition-all duration-200",
                     currentStep > step.id
-                      ? "bg-emerald-500 text-white shadow-md"
+                      ? "!bg-emerald-500/90 !border-emerald-400/50 text-white shadow-md"
                       : currentStep === step.id
-                      ? "bg-[#F7B500] text-slate-900 shadow-md"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-white/90"
+                      ? "icon-glass-amber !bg-[#F7B500]/90 text-slate-900 shadow-md"
+                      : "text-slate-400 dark:text-white/90"
                   )}
                   data-testid={`wizard-step-${step.id}`}
                 >
@@ -215,7 +244,7 @@ export const InspectionWizard = () => {
                           <SelectValue placeholder="Search and select equipment..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {EQUIPMENT_OPTIONS.map((equipment) => (
+                          {equipmentOptions.map((equipment) => (
                             <SelectItem key={equipment.model} value={equipment.model}>
                               <div className="flex items-center gap-2">
                                 <Truck className="w-4 h-4 text-[#F7B500]" />
@@ -223,9 +252,66 @@ export const InspectionWizard = () => {
                               </div>
                             </SelectItem>
                           ))}
+                          <div className="border-t border-slate-200 dark:border-slate-700 mt-1 pt-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start h-9 text-[13px] text-[#F7B500] hover:text-[#E5A800] hover:bg-[#F7B500]/10"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setAddEquipmentOpen(true);
+                              }}
+                              data-testid="add-equipment-btn"
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add new equipment
+                            </Button>
+                          </div>
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Add new equipment dialog */}
+                    <Dialog open={addEquipmentOpen} onOpenChange={setAddEquipmentOpen}>
+                      <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+                        <DialogHeader>
+                          <DialogTitle className="text-slate-900 dark:text-white">Add new equipment</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddEquipment} className="grid gap-4 py-2">
+                          <div className="grid gap-2">
+                            <Label htmlFor="new-equipment-model" className="text-slate-700 dark:text-white">Equipment model name</Label>
+                            <Input
+                              id="new-equipment-model"
+                              placeholder="e.g. CAT 330 Excavator"
+                              value={newEquipmentModel}
+                              onChange={(e) => setNewEquipmentModel(e.target.value)}
+                              className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                              required
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="new-equipment-serial" className="text-slate-700 dark:text-white">Serial number prefix (optional)</Label>
+                            <Input
+                              id="new-equipment-serial"
+                              placeholder="e.g. CAT0330X"
+                              value={newEquipmentSerialPrefix}
+                              onChange={(e) => setNewEquipmentSerialPrefix(e.target.value)}
+                              className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono"
+                            />
+                          </div>
+                          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                            <Button type="button" variant="outline" onClick={() => setAddEquipmentOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" className="bg-[#F7B500] hover:bg-[#E5A800] text-slate-900">
+                              Add equipment
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
 
                     {formData.equipment_model && (
                       <div>
@@ -325,10 +411,10 @@ export const InspectionWizard = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
                             <div className={cn(
-                              "w-9 h-9 rounded-lg flex items-center justify-center",
+                              "icon-glass icon-glass-lg flex items-center justify-center",
                               formData.inspection_type === type.name 
-                                ? "bg-[#F7B500]/20" 
-                                : "bg-slate-100 dark:bg-slate-800"
+                                ? "icon-glass-amber" 
+                                : ""
                             )}>
                               <type.icon className={cn(
                                 "w-5 h-5",
@@ -408,7 +494,7 @@ export const InspectionWizard = () => {
 
                   <div className="bg-[#F7B500]/10 border border-[#F7B500]/20 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-[#F7B500]/20 flex items-center justify-center flex-shrink-0">
+                      <div className="icon-glass icon-glass-lg icon-glass-amber flex-shrink-0">
                         <Play className="w-5 h-5 text-[#F7B500]" />
                       </div>
                       <div>

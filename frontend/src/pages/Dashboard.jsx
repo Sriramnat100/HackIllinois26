@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, BarChart3, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Plus, BarChart3, PanelRightClose, PanelRightOpen, Bookmark } from "lucide-react";
 import axios from "axios";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { InspectionTable } from "@/components/InspectionTable";
 import { ChatDock } from "@/components/ChatDock";
 import { AnalyticsCards } from "@/components/AnalyticsCards";
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [savedCharts, setSavedCharts] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -58,6 +60,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleAddRow = async (payload) => {
+    const response = await axios.post(`${API_URL}/inspections`, payload);
+    setInspections((prev) => [response.data, ...prev]);
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] overflow-hidden bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 page-enter" data-testid="dashboard-page">
       {/* Main Content */}
@@ -68,6 +75,7 @@ export default function Dashboard() {
             inspections={inspections}
             onSearch={handleSearch}
             onFilter={handleFilter}
+            onAddRow={handleAddRow}
           />
         </div>
 
@@ -79,7 +87,7 @@ export default function Dashboard() {
           >
             <div className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                <div className="icon-glass icon-glass-md icon-glass-amber">
                   <BarChart3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Analytics</h2>
@@ -93,8 +101,51 @@ export default function Dashboard() {
                 <PanelRightClose className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <AnalyticsCards analytics={analytics} />
+              {savedCharts.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Bookmark className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white">Saved charts</h3>
+                  </div>
+                  {savedCharts.map((chart) => {
+                    const data = (chart.data || []).slice(0, 8).map((item, i) => ({
+                      category: String(item?.category ?? item?.name ?? i),
+                      count: Number(item?.count ?? item?.value ?? item?.percentage ?? 0) || 0,
+                    }));
+                    return data.length > 0 ? (
+                      <div key={chart.id} className="analytics-card">
+                        <div className="analytics-header">
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                            <BarChart3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">
+                              {chart.title || "Chart"}
+                            </h3>
+                            <p className="text-[11px] text-slate-500 dark:text-white/90">From chat</p>
+                          </div>
+                        </div>
+                        <div className="px-4 pt-3 pb-1">
+                          <div className="h-28 w-full min-w-0">
+                            <ResponsiveContainer width="99%" height="100%">
+                              <BarChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="category" tick={{ fontSize: 10, fill: "#64748B" }} axisLine={false} tickLine={false} />
+                                <YAxis hide domain={[0, "auto"]} />
+                                <Tooltip
+                                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }}
+                                />
+                                <Bar dataKey="count" fill="#F7B500" radius={[4, 4, 0, 0]} barSize={14} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              )}
             </div>
           </aside>
         ) : (
@@ -113,7 +164,14 @@ export default function Dashboard() {
       </div>
 
       {/* Chatbot Dock - Bottom Left */}
-      <ChatDock />
+      <ChatDock
+        onSaveChart={(payload) => {
+          setSavedCharts((prev) => [
+            ...prev,
+            { id: String(Date.now()), title: payload.title || "Chart", data: payload.data || [] },
+          ]);
+        }}
+      />
 
       {/* Floating Action Button - New Inspection */}
       <button

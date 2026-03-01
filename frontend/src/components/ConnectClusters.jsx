@@ -58,6 +58,18 @@ export const ConnectClusters = ({ clusters = [] }) => {
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-[15px] text-slate-900 dark:text-white">
                   {item.equipment_model}
+          <div className="flex items-start gap-4">
+            <div className="icon-glass icon-glass-xl icon-glass-blue flex-shrink-0">
+              {index === 0 ? (
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              ) : (
+                <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="font-semibold text-[14px] text-slate-900 dark:text-white truncate group-hover:text-[#F7B500] transition-colors">
+                  {cluster.title}
                 </h4>
                 <p className="text-[12px] font-mono text-slate-500 dark:text-white/80">
                   {item.serial_number}
@@ -242,7 +254,7 @@ export const ConnectClusters = ({ clusters = [] }) => {
 
       {clusters.length === 0 && (
         <div className="text-center py-16">
-          <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <div className="icon-glass icon-glass-2xl rounded-full mx-auto mb-4">
             <Layers className="w-7 h-7 text-slate-300 dark:text-white/70" />
           </div>
           <p className="text-[14px] font-medium text-slate-500 dark:text-white">

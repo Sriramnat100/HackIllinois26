@@ -45,7 +45,7 @@ export const AnalyticsCards = ({ analytics }) => {
       {/* Most Failed Parts */}
       <div className="analytics-card">
         <div className="analytics-header">
-          <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+          <div className="icon-glass icon-glass-md icon-glass-red">
             <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
           </div>
           <div className="flex-1">
@@ -112,7 +112,7 @@ export const AnalyticsCards = ({ analytics }) => {
       {/* Inspections Over Time */}
       <div className="analytics-card">
         <div className="analytics-header">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+          <div className="icon-glass icon-glass-md icon-glass-blue">
             <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex-1">
@@ -169,7 +169,7 @@ export const AnalyticsCards = ({ analytics }) => {
       {/* Pass vs Fail vs Monitor */}
       <div className="analytics-card">
         <div className="analytics-header">
-          <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+          <div className="icon-glass icon-glass-md icon-glass-violet">
             <PieChartIcon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
           </div>
           <div className="flex-1">
