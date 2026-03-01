@@ -5,8 +5,7 @@ import axios from "axios";
 import { InspectionTable } from "@/components/InspectionTable";
 import { ChatDock } from "@/components/ChatDock";
 import { AnalyticsCards } from "@/components/AnalyticsCards";
-
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL } from "@/config";
 
 export default function Dashboard() {
   const navigate = useNavigate();
