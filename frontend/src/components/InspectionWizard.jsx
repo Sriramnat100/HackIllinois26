@@ -176,7 +176,7 @@ export const InspectionWizard = () => {
                       ? "bg-[#F7B500] text-slate-900"
                       : currentStep === step.id
                       ? "bg-[#F7B500] text-slate-900 ring-4 ring-[#F7B500]/20"
-                      : "bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500"
+                      : "bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500",
                     "icon-glass w-11 h-11 rounded-xl flex items-center justify-center text-[14px] font-bold transition-all duration-200",
                     currentStep > step.id
                       ? "!bg-emerald-500/90 !border-emerald-400/50 text-white shadow-md"
@@ -500,7 +500,6 @@ export const InspectionWizard = () => {
 
                   <div className="bg-[#F7B500]/6 border border-[#F7B500]/12 rounded-[12px] p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-[10px] bg-[#F7B500]/15 flex items-center justify-center flex-shrink-0">
                       <div className="icon-glass icon-glass-lg icon-glass-amber flex-shrink-0">
                         <Play className="w-5 h-5 text-[#F7B500]" />
                       </div>

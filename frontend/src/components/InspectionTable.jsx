@@ -195,8 +195,6 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
       <div className="card-header-enterprise">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-[10px] bg-slate-100/80 dark:bg-slate-800 flex items-center justify-center">
-              <ClipboardList className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             <div className="icon-glass icon-glass-lg">
               <ClipboardList className="w-5 h-5 text-slate-600 dark:text-white" />
             </div>
@@ -413,7 +411,6 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
                 </td>
                 <td>
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-[10px] bg-[#F7B500]/8 flex items-center justify-center flex-shrink-0">
                     <div className="icon-glass icon-glass-xl icon-glass-amber flex-shrink-0">
                       <span className="text-[11px] font-bold text-[#F7B500]">
                         {inspection.equipment_model?.split(' ')[1]?.substring(0, 3) || 'CAT'}
@@ -438,7 +435,6 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                     className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-white hover:text-[#F7B500] hover:bg-[#F7B500]/10"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -458,7 +454,6 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                       className="h-8 px-2.5 text-[13px] text-slate-600 dark:text-white hover:text-[#F7B500] hover:bg-[#F7B500]/10"
                       onClick={(e) => {
                         e.stopPropagation();

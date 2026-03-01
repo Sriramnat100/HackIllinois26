@@ -20,20 +20,13 @@ export const LiveFindingsTimeline = ({ findings = [], isRecording }) => {
   const otherFindings = sortedFindings.filter((f) => f.severity !== "HIGH");
 
   return (
-    <div 
-      className="h-full flex flex-col bg-[#0d1118]"
-      data-testid="live-findings-timeline"
-    >
+    <div className="h-full flex flex-col bg-[#0d1118]" data-testid="live-findings-timeline">
       {/* Header */}
       <div className="px-4 py-3 border-b border-slate-800 bg-[#101722]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-cyan-300" />
-            <h3 className="text-[14px] font-semibold text-white tracking-tight">
-            <Activity className="w-4 h-4 text-slate-500 dark:text-white" />
-            <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white">
-              Live Findings
-            </h3>
+            <h3 className="text-[14px] font-semibold text-white tracking-tight">Live Findings</h3>
           </div>
           <div className="flex items-center gap-2">
             {isRecording && (
@@ -42,10 +35,7 @@ export const LiveFindingsTimeline = ({ findings = [], isRecording }) => {
                 Streaming
               </span>
             )}
-            <span className="text-[12px] text-slate-400 font-medium">
-            <span className="text-[12px] text-slate-500 dark:text-white font-medium">
-              {findings.length} found
-            </span>
+            <span className="text-[12px] text-slate-400 font-medium">{findings.length} found</span>
           </div>
         </div>
       </div>
@@ -58,9 +48,7 @@ export const LiveFindingsTimeline = ({ findings = [], isRecording }) => {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Pin className="w-3.5 h-3.5 text-red-500" />
-                <span className="text-[11px] font-bold text-red-300 uppercase tracking-wider">
-                  Safety Alerts
-                </span>
+                <span className="text-[11px] font-bold text-red-300 uppercase tracking-wider">Safety Alerts</span>
                 <span className="ml-auto text-[11px] text-red-200 bg-red-500/20 border border-red-500/30 px-1.5 py-0.5 rounded font-medium">
                   {safetyAlerts.length}
                 </span>
@@ -78,7 +66,6 @@ export const LiveFindingsTimeline = ({ findings = [], isRecording }) => {
             <div className="space-y-2">
               {safetyAlerts.length > 0 && (
                 <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-2 px-1">
-                <div className="text-[11px] font-medium text-slate-500 dark:text-white uppercase tracking-wider mb-2 px-1">
                   Other Findings
                 </div>
               )}
@@ -89,10 +76,8 @@ export const LiveFindingsTimeline = ({ findings = [], isRecording }) => {
           )}
 
           {findings.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
               <div className="w-12 h-12 rounded-full bg-slate-800/80 flex items-center justify-center mb-3 border border-slate-700">
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/90">
-              <div className="icon-glass w-12 h-12 rounded-full mb-3">
                 <AlertTriangle className="w-6 h-6 opacity-50" />
               </div>
               <p className="text-[13px] font-medium">No findings yet</p>
@@ -107,21 +92,17 @@ export const LiveFindingsTimeline = ({ findings = [], isRecording }) => {
 
 const FindingItem = ({ finding, isSafetyAlert }) => {
   const severity = finding.severity || "LOW";
+
   return (
     <div
       className={cn(
         "relative finding-item overflow-hidden pl-4",
-        isSafetyAlert ? "finding-item-high" : 
-        severity === "MEDIUM" ? "finding-item-medium" : "finding-item-low"
+        isSafetyAlert ? "finding-item-high" : severity === "MEDIUM" ? "finding-item-medium" : "finding-item-low"
       )}
       data-testid={`finding-${finding.id}`}
     >
-      <span
-        className={cn(
-          "absolute left-0 top-0 h-full w-1",
-          severityStrip[severity] || severityStrip.LOW
-        )}
-      />
+      <span className={cn("absolute left-0 top-0 h-full w-1", severityStrip[severity] || severityStrip.LOW)} />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
@@ -130,16 +111,13 @@ const FindingItem = ({ finding, isSafetyAlert }) => {
               <AlertTriangle className="w-3.5 h-3.5 text-red-300" />
             </div>
           )}
-          <span className="font-semibold text-[13px] text-slate-100 leading-tight">
-            {finding.title}
-          </span>
+          <span className="font-semibold text-[13px] text-slate-100 leading-tight">{finding.title}</span>
         </div>
         <SeverityBadge severity={finding.severity} />
       </div>
 
       {/* Meta */}
       <div className="flex items-center gap-4 text-[11px] text-slate-400 mb-2.5">
-      <div className="flex items-center gap-4 text-[11px] text-slate-500 dark:text-white mb-2.5">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
           {finding.timestamp}
@@ -152,7 +130,6 @@ const FindingItem = ({ finding, isSafetyAlert }) => {
 
       {/* Recommendation */}
       <div className="flex items-start gap-2 text-[12px] text-slate-300 bg-slate-900/60 border border-slate-700 rounded-md p-2.5">
-      <div className="flex items-start gap-2 text-[12px] text-slate-600 dark:text-white bg-white/60 dark:bg-slate-800/50 rounded-lg p-2.5">
         <Lightbulb className="w-3.5 h-3.5 mt-0.5 text-[#F7B500] flex-shrink-0" />
         <span className="leading-relaxed">{finding.recommendation}</span>
       </div>

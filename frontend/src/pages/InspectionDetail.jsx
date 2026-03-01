@@ -42,7 +42,6 @@ import { GoogleDocsIcon } from "@/components/icons/GoogleDocsIcon";
 import axios from "axios";
 import { toast } from "sonner";
 
-import { API_URL } from "@/lib/api";
 import { API_URL } from "@/config";
 
 export default function InspectionDetail() {
@@ -197,7 +196,6 @@ export default function InspectionDetail() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-background">
       <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <div className="spinner-cat" />
       </div>
@@ -206,7 +204,6 @@ export default function InspectionDetail() {
 
   if (!inspection) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-background">
       <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <div className="text-center">
           <p className="text-slate-500 dark:text-white/90 mb-4 text-[14px]">Inspection not found</p>
@@ -219,7 +216,6 @@ export default function InspectionDetail() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-background page-enter" data-testid="inspection-detail-page">
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 page-enter" data-testid="inspection-detail-page">
       {/* Header */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-5 sticky top-14 z-30">
@@ -228,8 +224,7 @@ export default function InspectionDetail() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 px-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white -ml-1"
-              className="h-9 px-2 text-slate-500 hover:text-slate-900 dark:text-white dark:hover:text-white -ml-2"
+              className="h-9 px-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white -ml-2"
               onClick={() => navigate("/app/dashboard")}
               data-testid="back-btn"
             >
@@ -238,7 +233,6 @@ export default function InspectionDetail() {
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-[12px] bg-[#F7B500]/10 flex items-center justify-center">
                 <div className="icon-glass icon-glass-xl icon-glass-amber">
                   <Truck className="w-5 h-5 text-[#F7B500]" />
                 </div>

@@ -1580,7 +1580,6 @@ Respond as STRICT JSON only (no markdown fences):
 {"spoken_response":"One tactical sentence","summary":"1-2 sentences","overall_severity":"LOW|MEDIUM|HIGH","recommended_decision":"PASS|FAIL|FURTHER INSPECTION","should_alert":false,"findings":[{"issue":"label","severity":"LOW|MEDIUM|HIGH","recommendation":"action","confidence":0.9}]}"""
 
         response = await openai_client.chat.completions.create(
-            model="gpt-4o-mini",
             model=OPENAI_CHAT_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},

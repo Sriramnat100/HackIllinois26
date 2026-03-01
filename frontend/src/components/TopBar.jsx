@@ -64,8 +64,6 @@ export const TopBar = () => {
           onClick={() => navigate("/app/dashboard")}
           data-testid="logo-link"
         >
-          <div className="w-9 h-9 bg-[#F7B500] rounded-[10px] flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-            <HardHat className="w-5 h-5 text-slate-900" />
           <div className="icon-glass icon-glass-xl group-hover:shadow-md transition-shadow">
             <HardHat className="w-5 h-5 text-slate-600 dark:text-white" />
           </div>
@@ -86,8 +84,6 @@ export const TopBar = () => {
             size="sm"
             className={`font-medium text-[14px] h-9 px-3 ${
               isActive("dashboard") 
-                ? "bg-slate-100/80 dark:bg-slate-800/80 text-slate-900 dark:text-white" 
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" 
                 : "text-slate-600 dark:text-white hover:text-slate-900 dark:hover:text-white"
             }`}
@@ -124,12 +120,6 @@ export const TopBar = () => {
               className="flex items-center gap-2 h-10 px-2 hover:bg-slate-100 dark:hover:bg-slate-800"
               data-testid="profile-dropdown-trigger"
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#F7B500] to-[#E5A800] flex items-center justify-center shadow-sm">
-                <span className="text-[12px] font-bold text-slate-900">SN</span>
-              </div>
-              <div className="hidden sm:flex flex-col items-start">
-                <span className="text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">Sriram N.</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">Inspector</span>
               <div className="icon-glass icon-glass-md rounded-full">
                 <span className="text-[13px] font-bold text-slate-600 dark:text-white">{initials}</span>
               </div>

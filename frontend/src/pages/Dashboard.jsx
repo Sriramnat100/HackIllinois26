@@ -7,7 +7,6 @@ import { InspectionTable } from "@/components/InspectionTable";
 import { ChatDock } from "@/components/ChatDock";
 import { AnalyticsCards } from "@/components/AnalyticsCards";
 
-import { API_URL } from "@/lib/api";
 import { API_URL } from "@/config";
 
 export default function Dashboard() {
@@ -68,11 +67,6 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-background page-enter" data-testid="dashboard-page">
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 h-full">
-        {/* Left Panel - Inspections Table */}
-        <div className="lg:col-span-8 flex flex-col h-full overflow-hidden pb-20 lg:pb-0">
     <div className="h-[calc(100vh-4rem)] overflow-hidden bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 page-enter" data-testid="dashboard-page">
       {/* Main Content */}
       <div className="flex h-full overflow-hidden">

@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import axios from "axios";
 
-import { API_URL } from "@/lib/api";
 import { API_URL } from "@/config";
 
 const suggestedPrompts = [
@@ -158,8 +157,6 @@ export const ChatDock = ({ onSaveChart }) => {
           <CollapsibleTrigger asChild>
             <div className="chat-header-enterprise cursor-pointer">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-[10px] bg-[#F7B500] flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-slate-900" />
                 <div className="icon-glass icon-glass-lg">
                   <Bot className="w-5 h-5 text-slate-600 dark:text-white" />
                 </div>
@@ -207,8 +204,6 @@ export const ChatDock = ({ onSaveChart }) => {
                     )}
                   >
                     {message.role === "assistant" && (
-                      <div className="w-7 h-7 rounded-[10px] bg-slate-100/80 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
-                        <Bot className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                       <div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0 mt-1">
                         <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                       </div>
@@ -275,10 +270,8 @@ export const ChatDock = ({ onSaveChart }) => {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="w-7 h-7 rounded-[10px] bg-slate-100/80 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0">
-                      <Bot className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-<div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0">
-                    <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
+                    <div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0">
+                      <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                     </div>
                     <div className="chat-bubble-assistant">
                       <div className="flex gap-1.5 py-1">

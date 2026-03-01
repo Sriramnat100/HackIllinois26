@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import axios from "axios";
 
-import { API_URL } from "@/lib/api";
+import { API_URL } from "@/config";
 
 const REPORT_STAGES = [
   "Analyzing footage",
@@ -44,7 +44,6 @@ const HIGH_IMMEDIATE_CONFIDENCE = 65;
 const MEDIUM_MIN_CONFIDENCE = 78;
 const NON_PASS_MIN_CONFIDENCE = 75;
 const REQUIRED_CONFIRMATIONS = 2;
-import { API_URL } from "@/config";
 
 export default function LiveInspection() {
   const { id } = useParams();
@@ -969,13 +968,6 @@ export default function LiveInspection() {
               </div>
             ))}
           </div>
-      <div className="h-[calc(100vh-4rem)] bg-slate-900 flex items-center justify-center" data-testid="generating-report">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#F7B500] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-          <h2 className="text-[22px] font-bold text-white mb-2">Generating Report</h2>
-          <p className="text-slate-400 dark:text-white/90 text-[14px]">
-            AI is analyzing findings and creating your inspection report...
-          </p>
         </div>
       </div>
     );
@@ -1057,9 +1049,6 @@ export default function LiveInspection() {
                       aiStatus === "listening" ? "text-emerald-400" :
                       aiStatus === "thinking" ? "text-cyan-300" :
                       aiStatus === "analyzing" ? "text-cyan-300" :
-                      "text-slate-400"
-                      aiStatus === "thinking" ? "text-blue-400" :
-                      aiStatus === "analyzing" ? "text-purple-400" :
                       "text-slate-400 dark:text-white/90"
                     )} />
                     <span className={cn(
@@ -1067,9 +1056,6 @@ export default function LiveInspection() {
                       aiStatus === "listening" ? "text-emerald-400" :
                       aiStatus === "thinking" ? "text-cyan-300" :
                       aiStatus === "analyzing" ? "text-cyan-300" :
-                      "text-slate-400"
-                      aiStatus === "thinking" ? "text-blue-400" :
-                      aiStatus === "analyzing" ? "text-purple-400" :
                       "text-slate-400 dark:text-white/90"
                     )}>
                       {aiStatus === "speaking" ? "AI Speaking" :
@@ -1133,9 +1119,6 @@ export default function LiveInspection() {
               <div className="transcript-overlay-enter bg-black/50 backdrop-blur-xl rounded-2xl p-4 max-w-md border border-white/10">
                 <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold mb-1.5">You said</p>
                 <p className="text-[13px] text-white/90 leading-relaxed">{lastTranscript}</p>
-              <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 max-w-md">
-                <p className="text-[11px] text-slate-400 dark:text-white/90 mb-1">You said:</p>
-                <p className="text-[13px] text-white">{lastTranscript}</p>
               </div>
             </div>
           )}
