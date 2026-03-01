@@ -18,7 +18,8 @@ import {
   Zap,
   FileUp,
   FileText,
-  X
+  X,
+  Bookmark
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
@@ -39,7 +40,7 @@ const documentPrompts = [
   { text: "What are the main risks and action items?", icon: Zap },
 ];
 
-export const ChatDock = () => {
+export const ChatDock = ({ onSaveChart }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState([
     {
@@ -219,9 +220,23 @@ export const ChatDock = () => {
                       <div className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</div>
                       {message.chart_data && (
                         <div className="mt-3 bg-white dark:bg-slate-900 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[11px] font-semibold text-slate-600 dark:text-white mb-2 uppercase tracking-wide">
-                            {message.chart_data.title}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-[11px] font-semibold text-slate-600 dark:text-white uppercase tracking-wide">
+                              {message.chart_data.title}
+                            </p>
+                            {typeof onSaveChart === "function" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-[11px] text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                onClick={() => onSaveChart({ title: message.chart_data.title, data: message.chart_data.data })}
+                              >
+                                <Bookmark className="w-3.5 h-3.5 mr-1" />
+                                Save chart
+                              </Button>
+                            )}
+                          </div>
                           <div className="h-28">
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={message.chart_data.data}>

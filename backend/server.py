@@ -81,6 +81,62 @@ def _extract_chart_json(text: str) -> Optional[dict]:
                 return None
     return None
 
+
+def _strip_markdown(text: str) -> str:
+    """Remove common Markdown from model output so the UI shows plain text."""
+    if not text:
+        return text
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    text = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"\1", text)
+    text = re.sub(r"(?<!_)_([^_]+)_(?!_)", r"\1", text)
+    return text.strip()
+
+
+def _remove_chart_json_from_text(text: str) -> str:
+    """Remove the chart JSON block (and any ```json ... ``` wrapper) so the UI doesn't show raw JSON."""
+    if not text or "chart_type" not in text.lower():
+        return text
+    start = text.find('{"chart_type"')
+    if start == -1:
+        start = text.find("{\"chart_type\"")
+    if start == -1:
+        return text
+    depth = 0
+    end = start
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end <= start:
+        return text
+    line_start = text.rfind("\n", 0, start) + 1
+    before_block = text[line_start:start].strip()
+    if before_block == "```json" or before_block == "```":
+        start = line_start
+    rest = text[end:].lstrip()
+    if rest.startswith("```"):
+        newline_after = rest.find("\n", 3)
+        end = end + (len(text[end:]) - len(rest)) + (newline_after + 1 if newline_after >= 0 else len(rest))
+    result = (text[:start] + text[end:]).strip()
+    lines = result.split("\n")
+    out = []
+    for line in lines:
+        s = line.strip()
+        if s in ("```", "```json"):
+            continue
+        if s.lower().startswith("here") and "json" in s.lower():
+            continue
+        if "json representation" in s.lower() or "json representation for" in s.lower():
+            continue
+        out.append(line)
+    return "\n".join(out).strip()
+
+
 # Initialize OpenAI Realtime Chat for WebRTC (optional; requires emergentintegrations)
 openai_api_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
 realtime_chat = OpenAIChatRealtime(api_key=openai_api_key) if (HAS_REALTIME and openai_api_key) else None
@@ -633,10 +689,10 @@ Use plain text only (no Markdown: no ** for bold, no # headers). Be concise, pro
             max_tokens=max_tokens
         )
         
-        response_text = response.choices[0].message.content
-        
-        # Extract chart JSON if present (simple bar charts for UI)
-        chart_data = _extract_chart_json(response_text)
+        raw_content = response.choices[0].message.content or ""
+        chart_data = _extract_chart_json(raw_content)
+        response_text = _remove_chart_json_from_text(raw_content)
+        response_text = _strip_markdown(response_text)
         return ChatResponse(response=response_text, chart_data=chart_data)
         
     except Exception as e:
