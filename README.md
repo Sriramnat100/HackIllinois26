@@ -16,6 +16,7 @@ Caterpillar Vision AI (Catvision) combines wearable-ready AI vision, detailed an
 - [Setup & Installation](#setup--installation)
 - [API Overview](#api-overview)
 - [Environment Variables](#environment-variables)
+- [Creators](#creators)
 - [License](#license)
 
 ---
@@ -281,6 +282,15 @@ Open `http://localhost:3000`. Use the landing “Log In” (any name) to reach t
 | Variable | Description |
 |----------|-------------|
 | `REACT_APP_BACKEND_URL` | Backend base URL (e.g. `http://localhost:8000`) |
+
+---
+
+## Creators
+
+- **Mridhan Balaji**
+- **Sriram Natrajan**
+- **Krish Badri**
+- **Eric Wang**
 
 ---
 
