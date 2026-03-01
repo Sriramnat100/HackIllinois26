@@ -322,6 +322,127 @@ MOCK_INSPECTION_DETAIL = {
     ]
 }
 
+# Per-inspection detail so Summary, Checklist, Media, Parts differ for each starter inspection
+MOCK_DETAIL_BY_INSPECTION = {
+    "insp-001": {
+        "summary": "CAT 320 Excavator passed all daily walkaround checks. Swing bearing and boom hydraulics are within spec. No fluid leaks or abnormal wear observed. Cab and safety equipment verified.",
+        "findings": [
+            {"id": "f1", "timestamp": "09:15:22", "severity": "LOW", "title": "Dust on cab filter", "recommendation": "Replace cab air filter at next PM", "confidence": 0.88, "category": "Cab"},
+            {"id": "f2", "timestamp": "09:18:00", "severity": "LOW", "title": "Boom pins within spec", "recommendation": "No action", "confidence": 0.99, "category": "Structural"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Hydraulics", "item": "Boom cylinder seals", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.96},
+            {"id": "c2", "category": "Hydraulics", "item": "Swing motor", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.94},
+            {"id": "c3", "category": "Engine", "item": "Oil level", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.99},
+            {"id": "c4", "category": "Safety", "item": "Seat belt and ROPS", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 1.0},
+            {"id": "c5", "category": "Cab", "item": "Cab air filter", "result": "MONITOR", "severity": "LOW", "evidence": None, "recommended_action": "Replace at next service", "confidence": 0.88}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "324-2341", "part_name": "Cab air filter", "fitment_certainty": 0.99, "compatible_models": ["320", "320L", "320M"]},
+            {"id": "p2", "part_number": "4W-9562", "part_name": "Hydraulic filter element", "fitment_certainty": 0.97, "compatible_models": ["320", "323", "326"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800", "thumbnail": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=200", "timestamp": "09:12:00", "caption": "320 excavator boom and stick"},
+            {"id": "m2", "type": "photo", "url": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800", "thumbnail": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200", "timestamp": "09:16:00", "caption": "Cab interior and controls"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-012", "title": "Same unit last week", "summary": "This 320 had a clean pass on 2025-01-08", "count": 1},
+            {"id": "insp-013", "title": "BuildCo fleet 320s", "summary": "4 other 320s at BuildCo passed this month", "count": 4}
+        ]
+    },
+    "insp-002": {
+        "summary": MOCK_INSPECTION_DETAIL["summary"],
+        "findings": MOCK_INSPECTION_DETAIL["findings"],
+        "checklist": MOCK_INSPECTION_DETAIL["checklist"],
+        "parts_matches": MOCK_INSPECTION_DETAIL["parts_matches"],
+        "media": MOCK_INSPECTION_DETAIL["media"],
+        "similar_inspections": [
+            {"id": "insp-010", "title": "Similar Hydraulic Issues Cluster", "summary": "3 other D6 units in the fleet have shown similar hydraulic line wear in the past 90 days", "count": 3},
+            {"id": "insp-011", "title": "Mirror Damage Pattern", "summary": "5 units reported side mirror damage this quarter, possible site condition issue", "count": 5}
+        ]
+    },
+    "insp-003": {
+        "summary": "CAT 966 Wheel Loader TA1 assessment found bucket cutting edge and teeth within wear limits but trending. Recommend scheduling teeth replacement in 3–4 weeks. Lift arms and tilt cylinders passed. Tire condition good.",
+        "findings": [
+            {"id": "f1", "timestamp": "11:02:11", "severity": "MEDIUM", "title": "Bucket teeth wear", "recommendation": "Order teeth set; replace within 30 days", "confidence": 0.92, "category": "Attachments"},
+            {"id": "f2", "timestamp": "11:05:44", "severity": "LOW", "title": "Lift arm pins", "recommendation": "Grease and re-check at next walkaround", "confidence": 0.91, "category": "Linkage"},
+            {"id": "f3", "timestamp": "11:10:02", "severity": "LOW", "title": "Radiator fins", "recommendation": "Blow out debris at next wash", "confidence": 0.89, "category": "Cooling"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Attachments", "item": "Bucket cutting edge", "result": "MONITOR", "severity": "MEDIUM", "evidence": "photo_001.jpg", "recommended_action": "Replace teeth in 30 days", "confidence": 0.92},
+            {"id": "c2", "category": "Attachments", "item": "Bucket cylinders", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.95},
+            {"id": "c3", "category": "Engine", "item": "Coolant and oil", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.98},
+            {"id": "c4", "category": "Tires", "item": "Front tire condition", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.97},
+            {"id": "c5", "category": "Tires", "item": "Rear tire condition", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.96},
+            {"id": "c6", "category": "Cooling", "item": "Radiator", "result": "MONITOR", "severity": "LOW", "evidence": None, "recommended_action": "Clean fins", "confidence": 0.89}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "8C-9021", "part_name": "Bucket tooth assembly (set of 6)", "fitment_certainty": 0.98, "compatible_models": ["966", "966M", "972M"]},
+            {"id": "p2", "part_number": "5P-4562", "part_name": "Cutting edge segment", "fitment_certainty": 0.95, "compatible_models": ["966", "968"]},
+            {"id": "p3", "part_number": "3T-2341", "part_name": "Lift cylinder seal kit", "fitment_certainty": 0.93, "compatible_models": ["966", "966M"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=800", "thumbnail": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=200", "timestamp": "11:00:00", "caption": "966 bucket and teeth"},
+            {"id": "m2", "type": "photo", "url": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800", "thumbnail": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200", "timestamp": "11:08:00", "caption": "Lift arms and linkage"},
+            {"id": "m3", "type": "video", "url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800", "thumbnail": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=200", "timestamp": "11:15:00", "caption": "TA1 full walkthrough"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-020", "title": "Quarry 966 fleet", "summary": "2 other 966s at Quarry Masters had bucket work this quarter", "count": 2},
+            {"id": "insp-021", "title": "Loader bucket wear", "summary": "Similar teeth wear on 968 and 972 in region", "count": 4}
+        ]
+    },
+    "insp-004": {
+        "summary": "CAT 745 Articulated Truck daily walkaround complete. All systems nominal. Tire pressures and tread depth within spec. Dump body hinges and cylinders checked. No leaks or damage. Ready for haul road.",
+        "findings": [
+            {"id": "f1", "timestamp": "08:45:00", "severity": "LOW", "title": "All systems OK", "recommendation": "No action", "confidence": 0.99, "category": "General"},
+            {"id": "f2", "timestamp": "08:47:30", "severity": "LOW", "title": "Tire pressure nominal", "recommendation": "Continue weekly check", "confidence": 0.98, "category": "Tires"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Tires", "item": "Front axle tires", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.98},
+            {"id": "c2", "category": "Tires", "item": "Rear axle tires", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.97},
+            {"id": "c3", "category": "Body", "item": "Dump body hinges", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.96},
+            {"id": "c4", "category": "Hydraulics", "item": "Hoist cylinders", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.95},
+            {"id": "c5", "category": "Engine", "item": "Oil and coolant", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.99}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "745-TIRE-01", "part_name": "Front tire 26.5R25", "fitment_certainty": 0.99, "compatible_models": ["745", "740"]},
+            {"id": "p2", "part_number": "2F-3341", "part_name": "Hoist cylinder seal kit", "fitment_certainty": 0.94, "compatible_models": ["745", "740", "735"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800", "thumbnail": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200", "timestamp": "08:42:00", "caption": "745 front and tires"},
+            {"id": "m2", "type": "photo", "url": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=800", "thumbnail": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=200", "timestamp": "08:50:00", "caption": "Dump body and hoist"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-030", "title": "Mountain Mining 745s", "summary": "3 other 745s at this site passed this week", "count": 3},
+            {"id": "insp-031", "title": "Articulated truck fleet", "summary": "740/745 fleet at Denver in good standing", "count": 6}
+        ]
+    },
+    "insp-005": {
+        "summary": "CAT 336 Excavator safety inspection in progress. Initial walkaround started; hydraulics and cab checks pending. No critical issues observed so far on boom and undercarriage.",
+        "findings": [
+            {"id": "f1", "timestamp": "14:00:00", "severity": "LOW", "title": "Inspection started", "recommendation": "Complete remaining checklist items", "confidence": 0.9, "category": "General"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Structural", "item": "Boom and stick", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.92},
+            {"id": "c2", "category": "Undercarriage", "item": "Track and rollers", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.88},
+            {"id": "c3", "category": "Hydraulics", "item": "Boom cylinders", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.85},
+            {"id": "c4", "category": "Engine", "item": "Oil level", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.99},
+            {"id": "c5", "category": "Safety", "item": "Cab and ROPS", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.95},
+            {"id": "c6", "category": "Electrical", "item": "Lights and horn", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.94}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "336-7890", "part_name": "Track roller (single)", "fitment_certainty": 0.96, "compatible_models": ["336", "336F", "340"]},
+            {"id": "p2", "part_number": "7K-1122", "part_name": "Boom pin bushing kit", "fitment_certainty": 0.91, "compatible_models": ["336", "336F"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800", "thumbnail": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=200", "timestamp": "14:00:00", "caption": "336 boom and cab — inspection in progress"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-040", "title": "Urban Dev 336 fleet", "summary": "2 other 336s at Urban Development scheduled this week", "count": 2}
+        ]
+    },
+}
+
 # --------------------- Routes ---------------------
 
 @api_router.get("/")
@@ -372,26 +493,26 @@ CREATED_INSPECTIONS = {}
 
 @api_router.get("/inspections/{inspection_id}")
 async def get_inspection(inspection_id: str):
-    """Get single inspection detail"""
-    # Return detailed mock for insp-002, otherwise return basic mock
-    if inspection_id == "insp-002":
-        return MOCK_INSPECTION_DETAIL
-    
+    """Get single inspection detail. Summary, checklist, media, and parts vary per starter inspection."""
     # Check if it's a dynamically created inspection
     if inspection_id in CREATED_INSPECTIONS:
         return CREATED_INSPECTIONS[inspection_id]
-    
+
+    # Use per-inspection detail for known mock IDs so Summary, Checklist, Media, Parts differ
     for insp in MOCK_INSPECTIONS:
         if insp["id"] == inspection_id:
-            return {**insp, **{
-                "findings": MOCK_INSPECTION_DETAIL["findings"],
-                "checklist": MOCK_INSPECTION_DETAIL["checklist"],
-                "parts_matches": MOCK_INSPECTION_DETAIL["parts_matches"],
-                "media": MOCK_INSPECTION_DETAIL["media"],
-                "similar_inspections": MOCK_INSPECTION_DETAIL["similar_inspections"]
-            }}
-    
-    # For any unknown ID, return a mock completed inspection
+            detail = MOCK_DETAIL_BY_INSPECTION.get(inspection_id, MOCK_INSPECTION_DETAIL)
+            return {
+                **insp,
+                "summary": detail.get("summary", insp.get("summary", "")),
+                "findings": detail.get("findings", []),
+                "checklist": detail.get("checklist", []),
+                "parts_matches": detail.get("parts_matches", []),
+                "media": detail.get("media", []),
+                "similar_inspections": detail.get("similar_inspections", [])
+            }
+
+    # For any unknown ID, return a generic completed inspection
     return {
         "id": inspection_id,
         "equipment_model": "CAT D6 Dozer",

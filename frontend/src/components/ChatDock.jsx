@@ -96,8 +96,8 @@ export const ChatDock = () => {
           <CollapsibleTrigger asChild>
             <div className="chat-header-enterprise cursor-pointer">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#F7B500] flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-slate-900" />
+                <div className="icon-glass icon-glass-lg">
+                  <Bot className="w-5 h-5 text-slate-600 dark:text-white" />
                 </div>
                 <div>
                   <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white">
@@ -135,7 +135,7 @@ export const ChatDock = () => {
                     )}
                   >
                     {message.role === "assistant" && (
-                      <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+                      <div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0 mt-1">
                         <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                       </div>
                     )}
@@ -187,8 +187,8 @@ export const ChatDock = () => {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0">
-                      <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
+<div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0">
+                    <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                     </div>
                     <div className="chat-bubble-assistant">
                       <div className="flex gap-1.5 py-1">

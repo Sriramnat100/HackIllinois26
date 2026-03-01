@@ -59,6 +59,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleAddRow = async (payload) => {
+    const response = await axios.post(`${API_URL}/inspections`, payload);
+    setInspections((prev) => [response.data, ...prev]);
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] overflow-hidden bg-slate-50 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 page-enter" data-testid="dashboard-page">
       {/* Main Content */}
@@ -69,6 +74,7 @@ export default function Dashboard() {
             inspections={inspections}
             onSearch={handleSearch}
             onFilter={handleFilter}
+            onAddRow={handleAddRow}
           />
         </div>
 
@@ -80,7 +86,7 @@ export default function Dashboard() {
           >
             <div className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                <div className="icon-glass icon-glass-md icon-glass-amber">
                   <BarChart3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Analytics</h2>

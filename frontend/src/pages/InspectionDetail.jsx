@@ -19,7 +19,6 @@ import {
   RefreshCw,
   Share2,
   AlertTriangle,
-  FileText,
   Image,
   Wrench,
   Link2,
@@ -29,6 +28,7 @@ import {
   Calendar,
   MapPin,
 } from "lucide-react";
+import { GoogleDocsIcon } from "@/components/icons/GoogleDocsIcon";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -150,7 +150,7 @@ export default function InspectionDetail() {
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-[#F7B500]/10 flex items-center justify-center">
+                <div className="icon-glass icon-glass-xl icon-glass-amber">
                   <Truck className="w-5 h-5 text-[#F7B500]" />
                 </div>
                 <div>
@@ -212,7 +212,7 @@ export default function InspectionDetail() {
               className="tab-enterprise flex items-center gap-1.5 data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-800 rounded-lg" 
               data-testid="tab-summary"
             >
-              <FileText className="w-4 h-4" />
+              <GoogleDocsIcon className="w-4 h-4" />
               Summary
             </TabsTrigger>
             <TabsTrigger 
@@ -266,7 +266,7 @@ export default function InspectionDetail() {
               <div className="card-enterprise border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20">
                 <div className="card-header-enterprise border-red-100 dark:border-red-900/50">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                    <div className="icon-glass icon-glass-md icon-glass-red">
                       <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
                     </div>
                     <h3 className="text-[14px] font-semibold text-red-800 dark:text-red-300">
@@ -301,12 +301,12 @@ export default function InspectionDetail() {
                       className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl"
                     >
                       <div
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-[14px] ${
+                        className={`icon-glass icon-glass-lg flex items-center justify-center flex-shrink-0 font-bold text-[14px] ${
                           item.priority === 1
-                            ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400"
+                            ? "icon-glass-red text-red-700 dark:text-red-400"
                             : item.priority === 2
-                            ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400"
-                            : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-white"
+                            ? "icon-glass-amber text-amber-700 dark:text-amber-400"
+                            : "text-slate-600 dark:text-white"
                         }`}
                       >
                         {item.priority}
@@ -322,7 +322,7 @@ export default function InspectionDetail() {
                           <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${
                             item.priority === 1 
                               ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                              : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-white"
+                              : "text-slate-600 dark:text-white"
                           }`}>
                             {item.risk}
                           </span>

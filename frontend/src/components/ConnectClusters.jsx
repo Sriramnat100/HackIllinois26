@@ -15,7 +15,7 @@ export const ConnectClusters = ({ clusters = [] }) => {
           data-testid={`cluster-${cluster.id}`}
         >
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+            <div className="icon-glass icon-glass-xl icon-glass-blue flex-shrink-0">
               {index === 0 ? (
                 <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               ) : (
@@ -42,7 +42,7 @@ export const ConnectClusters = ({ clusters = [] }) => {
 
       {clusters.length === 0 && (
         <div className="text-center py-16">
-          <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <div className="icon-glass icon-glass-2xl rounded-full mx-auto mb-4">
             <Layers className="w-7 h-7 text-slate-300 dark:text-white/70" />
           </div>
           <p className="text-[14px] font-medium text-slate-500 dark:text-white">No similar inspections found</p>
