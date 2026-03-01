@@ -171,6 +171,12 @@ export const InspectionWizard = () => {
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
+                    "w-10 h-10 rounded-[12px] flex items-center justify-center text-[14px] font-bold transition-all duration-[180ms]",
+                    currentStep > step.id
+                      ? "bg-[#F7B500] text-slate-900"
+                      : currentStep === step.id
+                      ? "bg-[#F7B500] text-slate-900 ring-4 ring-[#F7B500]/20"
+                      : "bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500",
                     "icon-glass w-11 h-11 rounded-xl flex items-center justify-center text-[14px] font-bold transition-all duration-200",
                     currentStep > step.id
                       ? "!bg-emerald-500/90 !border-emerald-400/50 text-white shadow-md"
@@ -204,8 +210,8 @@ export const InspectionWizard = () => {
               {index < steps.length - 1 && (
                 <div
                   className={cn(
-                    "w-20 sm:w-28 h-1 mx-4 rounded-full transition-colors duration-200",
-                    currentStep > step.id ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"
+                    "w-20 sm:w-28 h-[2px] mx-4 rounded-full transition-colors duration-[180ms]",
+                    currentStep > step.id ? "bg-[#F7B500]" : "bg-slate-200 dark:bg-slate-700/50"
                   )}
                 />
               )}
@@ -223,7 +229,7 @@ export const InspectionWizard = () => {
               {currentStep === 1 && (
                 <div className="space-y-6" data-testid="step-equipment">
                   <div>
-                    <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-1">
+                    <h2 className="text-[20px] font-semibold text-slate-900 dark:text-white mb-1">
                       Select Equipment
                     </h2>
                     <p className="text-[13px] text-slate-500 dark:text-white">
@@ -380,7 +386,7 @@ export const InspectionWizard = () => {
               {currentStep === 2 && (
                 <div className="space-y-6" data-testid="step-type">
                   <div>
-                    <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-1">
+                    <h2 className="text-[20px] font-semibold text-slate-900 dark:text-white mb-1">
                       Select Inspection Type
                     </h2>
                     <p className="text-[13px] text-slate-500 dark:text-white">
@@ -400,7 +406,7 @@ export const InspectionWizard = () => {
                         key={type.id}
                         htmlFor={type.id}
                         className={cn(
-                          "flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-150",
+                          "flex items-start gap-4 p-4 rounded-[12px] border cursor-pointer transition-all duration-[180ms]",
                           formData.inspection_type === type.name
                             ? "border-[#F7B500] bg-[#F7B500]/5"
                             : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
@@ -451,7 +457,7 @@ export const InspectionWizard = () => {
               {currentStep === 3 && (
                 <div className="space-y-6" data-testid="step-review">
                   <div>
-                    <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-1">
+                    <h2 className="text-[20px] font-semibold text-slate-900 dark:text-white mb-1">
                       Review & Start
                     </h2>
                     <p className="text-[13px] text-slate-500 dark:text-white">
@@ -459,7 +465,7 @@ export const InspectionWizard = () => {
                     </p>
                   </div>
 
-                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 space-y-4">
+                  <div className="bg-slate-50/60 dark:bg-slate-800/30 rounded-[12px] p-5 space-y-4">
                     <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-700">
                       <span className="text-[12px] text-slate-500 dark:text-white font-medium uppercase tracking-wide">Equipment</span>
                       <span className="text-[14px] font-semibold text-slate-900 dark:text-white">
@@ -492,7 +498,7 @@ export const InspectionWizard = () => {
                     </div>
                   </div>
 
-                  <div className="bg-[#F7B500]/10 border border-[#F7B500]/20 rounded-xl p-4">
+                  <div className="bg-[#F7B500]/6 border border-[#F7B500]/12 rounded-[12px] p-4">
                     <div className="flex items-start gap-3">
                       <div className="icon-glass icon-glass-lg icon-glass-amber flex-shrink-0">
                         <Play className="w-5 h-5 text-[#F7B500]" />

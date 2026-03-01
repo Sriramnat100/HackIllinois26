@@ -43,11 +43,12 @@ export const ConnectClusters = ({ clusters = [] }) => {
         <div
           key={item.id}
           className={cn(
-            "card-enterprise overflow-hidden",
+            "card-enterprise overflow-hidden cursor-pointer",
             "border border-slate-200 dark:border-slate-700",
             "hover:border-[#F7B500]/40 transition-colors"
           )}
           data-testid={`similar-vehicle-${item.id}`}
+          onClick={() => navigate(`/app/inspections/${item.id}`)}
         >
           {/* Vehicle header */}
           <div className="card-header-enterprise border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
@@ -58,57 +59,13 @@ export const ConnectClusters = ({ clusters = [] }) => {
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-[15px] text-slate-900 dark:text-white">
                   {item.equipment_model}
-          <div className="flex items-start gap-4">
-            <div className="icon-glass icon-glass-xl icon-glass-blue flex-shrink-0">
-              {index === 0 ? (
-                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              ) : (
-                <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-semibold text-[14px] text-slate-900 dark:text-white truncate group-hover:text-[#F7B500] transition-colors">
-                  {cluster.title}
                 </h4>
-                <p className="text-[12px] font-mono text-slate-500 dark:text-white/80">
-                  {item.serial_number}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {item.status && (
-                  <span
-                    className={cn(
-                      "text-[11px] font-semibold px-2.5 py-1 rounded-full",
-                      item.status === "PASS"
-                        ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400"
-                        : "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
-                    )}
-                  >
-                    {item.status} after repair
-                  </span>
-                )}
-                {item.inspection_date && (
-                  <span className="text-[11px] text-slate-500 dark:text-white/70 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {item.inspection_date}
-                  </span>
+                {item.serial_number && (
+                  <p className="text-[12px] font-mono text-slate-500 dark:text-white/80 mt-0.5">
+                    {item.serial_number}
+                  </p>
                 )}
               </div>
-            </div>
-            <div className="flex flex-wrap gap-4 mt-2 text-[12px] text-slate-600 dark:text-white/80">
-              {item.customer && (
-                <span className="flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
-                  {item.customer}
-                </span>
-              )}
-              {item.location && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                  {item.location}
-                </span>
-              )}
             </div>
           </div>
 

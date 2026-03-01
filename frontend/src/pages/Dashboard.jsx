@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recha
 import { InspectionTable } from "@/components/InspectionTable";
 import { ChatDock } from "@/components/ChatDock";
 import { AnalyticsCards } from "@/components/AnalyticsCards";
+
 import { API_URL } from "@/config";
 
 export default function Dashboard() {

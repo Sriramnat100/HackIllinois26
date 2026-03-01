@@ -88,7 +88,7 @@
 | Method | Path | Handler / purpose |
 |--------|------|-------------------|
 | GET | `/` | Root message |
-| POST | `/status` | Create status check (MongoDB) |
+| POST | `/status` | Create status check (in-memory) |
 | GET | `/status` | List status checks |
 | GET | `/inspections` | List inspections (query: status, inspection_type, search) |
 | GET | `/inspections/{id}` | Inspection detail |
@@ -116,7 +116,7 @@ Realtime (when configured) is under `/api/ai` via `realtime_router` (e.g. sessio
 
 ### 3.4 Data
 
-- **MongoDB:** `MONGO_URL`, `DB_NAME` in env; used for status checks and (planned) inspections.
+- **In-memory:** Status checks stored in `STATUS_CHECKS` list. Inspections and media in `MOCK_INSPECTIONS`, `CREATED_INSPECTIONS`, `INSPECTION_MEDIA`. No MongoDB required.
 - **In-memory:** `MOCK_INSPECTIONS`, `MOCK_ANALYTICS`, `MOCK_INSPECTION_DETAIL`, `CREATED_INSPECTIONS` for inspections until persistence is wired.
 
 ### 3.5 Env / secrets

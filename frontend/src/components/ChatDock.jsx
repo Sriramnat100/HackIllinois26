@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import axios from "axios";
+
 import { API_URL } from "@/config";
 
 const suggestedPrompts = [
@@ -269,8 +270,8 @@ export const ChatDock = ({ onSaveChart }) => {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-<div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0">
-                    <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
+                    <div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0">
+                      <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                     </div>
                     <div className="chat-bubble-assistant">
                       <div className="flex gap-1.5 py-1">
@@ -358,7 +359,7 @@ export const ChatDock = ({ onSaveChart }) => {
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/30">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -377,7 +378,7 @@ export const ChatDock = ({ onSaveChart }) => {
                 <Button
                   type="submit"
                   size="icon"
-                  className="h-10 w-10 bg-[#F7B500] hover:bg-[#E5A800] text-slate-900"
+                  className="h-10 w-10 rounded-[10px] bg-[#F7B500] hover:bg-[#E5A800] text-slate-900"
                   disabled={isLoading || !inputValue.trim()}
                   data-testid="chat-send-btn"
                 >
