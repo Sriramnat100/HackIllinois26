@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -12,10 +13,22 @@ import {
   Cell,
 } from "recharts";
 import { AlertTriangle, TrendingUp, PieChart as PieChartIcon, ArrowUp, ArrowDown } from "lucide-react";
+import { CategoryAnalyticsDetail } from "@/components/CategoryAnalyticsDetail";
 
 const COLORS = ["#059669", "#DC2626", "#D97706"];
 
 export const AnalyticsCards = ({ analytics }) => {
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryDetailOpen, setCategoryDetailOpen] = useState(false);
+
+  const handleCategoryClick = (payload) => {
+    const category = payload?.category ?? payload?.payload?.category;
+    if (category) {
+      setSelectedCategory(category);
+      setCategoryDetailOpen(true);
+    }
+  };
+
   if (!analytics) return null;
 
   const pieData = [
@@ -77,15 +90,24 @@ export const AnalyticsCards = ({ analytics }) => {
                   fill="#DC2626"
                   radius={[0, 4, 4, 0]}
                   barSize={14}
+                  onClick={handleCategoryClick}
+                  cursor="pointer"
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
         <p className="analytics-insight">
+          Click a category above for detailed analytics.{" "}
           <span className="text-red-600 dark:text-red-400 font-medium">Hydraulics</span> account for 35% of all failures
         </p>
       </div>
+
+      <CategoryAnalyticsDetail
+        category={selectedCategory}
+        open={categoryDetailOpen}
+        onClose={() => setCategoryDetailOpen(false)}
+      />
 
       {/* Inspections Over Time */}
       <div className="analytics-card">

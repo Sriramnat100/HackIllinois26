@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
+from fastapi.responses import Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,6 +11,8 @@ from typing import List, Optional, Any
 import uuid
 import json
 import re
+import io
+import csv
 from datetime import datetime, timezone
 from openai import AsyncOpenAI
 
@@ -341,6 +344,191 @@ MOCK_ANALYTICS = {
     }
 }
 
+# Detailed analytics per category (for category drill-down)
+def _category_analytics(category: str) -> dict:
+    """Mock detailed analytics for a category. Varies by category name."""
+    base = {
+        "Hydraulics": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 3},
+                {"month": "Sep", "count": 2},
+                {"month": "Oct", "count": 4},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 2},
+                {"month": "Jan", "count": 0},
+            ],
+            "item_breakdown": [
+                {"item": "Main Boom Cylinder", "pass": 8, "fail": 5, "monitor": 2},
+                {"item": "Stick Cylinder", "pass": 12, "fail": 1, "monitor": 2},
+                {"item": "Hydraulic Hoses", "pass": 6, "fail": 4, "monitor": 5},
+                {"item": "Pump & Reservoir", "pass": 10, "fail": 2, "monitor": 3},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 5}, {"severity": "MEDIUM", "count": 4}, {"severity": "LOW", "count": 3}],
+            "top_recommended_actions": [
+                {"action": "Replace high-pressure line", "count": 6},
+                {"action": "Inspect seals and fittings", "count": 4},
+                {"action": "Top off fluid / check for leaks", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-002", "equipment": "CAT D6 Dozer", "date": "2025-01-14", "result": "FAIL", "summary": "Hydraulic leak on main boom cylinder"},
+                {"id": "insp-005", "equipment": "CAT 320 Excavator", "date": "2025-01-10", "result": "FAIL", "summary": "Stick cylinder seal wear"},
+                {"id": "insp-008", "equipment": "CAT D6 Dozer", "date": "2025-01-05", "result": "MONITOR", "summary": "Minor hose wear observed"},
+            ],
+            "heatmap_global": [
+                {"id": "USA", "topo_id": "840", "name": "United States", "high": 4, "medium": 3, "low": 2, "severity_index": 0.72},
+                {"id": "CAN", "topo_id": "124", "name": "Canada", "high": 1, "medium": 2, "low": 1, "severity_index": 0.55},
+                {"id": "GBR", "topo_id": "826", "name": "United Kingdom", "high": 2, "medium": 2, "low": 1, "severity_index": 0.68},
+                {"id": "DEU", "topo_id": "276", "name": "Germany", "high": 1, "medium": 1, "low": 2, "severity_index": 0.42},
+                {"id": "BRA", "topo_id": "076", "name": "Brazil", "high": 2, "medium": 1, "low": 0, "severity_index": 0.78},
+                {"id": "AUS", "topo_id": "036", "name": "Australia", "high": 1, "medium": 2, "low": 1, "severity_index": 0.52},
+                {"id": "IND", "topo_id": "356", "name": "India", "high": 2, "medium": 2, "low": 1, "severity_index": 0.65},
+                {"id": "MEX", "topo_id": "484", "name": "Mexico", "high": 1, "medium": 1, "low": 1, "severity_index": 0.48},
+            ],
+            "heatmap_local": {
+                "USA": [
+                    {"id": "TX", "name": "Texas", "high": 2, "medium": 1, "low": 0, "severity_index": 0.85},
+                    {"id": "CA", "name": "California", "high": 1, "medium": 1, "low": 1, "severity_index": 0.58},
+                    {"id": "IL", "name": "Illinois", "high": 1, "medium": 1, "low": 0, "severity_index": 0.72},
+                    {"id": "AZ", "name": "Arizona", "high": 0, "medium": 1, "low": 1, "severity_index": 0.45},
+                    {"id": "CO", "name": "Colorado", "high": 0, "medium": 0, "low": 1, "severity_index": 0.28},
+                ],
+                "CAN": [{"id": "ON", "name": "Ontario", "high": 0, "medium": 1, "low": 1, "severity_index": 0.4}, {"id": "AB", "name": "Alberta", "high": 1, "medium": 0, "low": 0, "severity_index": 0.9}],
+                "GBR": [{"id": "ENG", "name": "England", "high": 1, "medium": 1, "low": 0, "severity_index": 0.7}, {"id": "SCT", "name": "Scotland", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}],
+            },
+            "insight_summary": "Hydraulics account for the highest share of failures. Main Boom Cylinder and hose assemblies are the most common failure points. Consider scheduling preventive hose replacement.",
+        },
+        "Engine": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 1},
+                {"month": "Sep", "count": 2},
+                {"month": "Oct", "count": 2},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 1},
+                {"month": "Jan", "count": 1},
+            ],
+            "item_breakdown": [
+                {"item": "Oil Level / Leaks", "pass": 10, "fail": 3, "monitor": 2},
+                {"item": "Coolant Level", "pass": 12, "fail": 1, "monitor": 2},
+                {"item": "Air Filter", "pass": 8, "fail": 2, "monitor": 5},
+                {"item": "Belts & Hoses", "pass": 11, "fail": 2, "monitor": 2},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 2}, {"severity": "MEDIUM", "count": 3}, {"severity": "LOW", "count": 3}],
+            "top_recommended_actions": [
+                {"action": "Replace oil filter / fix leak", "count": 4},
+                {"action": "Top off coolant", "count": 2},
+                {"action": "Replace air filter", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-003", "equipment": "CAT 320 Excavator", "date": "2025-01-12", "result": "FAIL", "summary": "Engine oil leak at filter housing"},
+                {"id": "insp-006", "equipment": "CAT D6 Dozer", "date": "2025-01-08", "result": "MONITOR", "summary": "Coolant level at minimum"},
+            ],
+            "heatmap_global": [
+                {"id": "USA", "topo_id": "840", "name": "United States", "high": 2, "medium": 2, "low": 3, "severity_index": 0.48},
+                {"id": "CAN", "topo_id": "124", "name": "Canada", "high": 1, "medium": 1, "low": 1, "severity_index": 0.5},
+                {"id": "MEX", "topo_id": "484", "name": "Mexico", "high": 1, "medium": 1, "low": 0, "severity_index": 0.65},
+            ],
+            "heatmap_local": {"USA": [{"id": "TX", "name": "Texas", "high": 1, "medium": 0, "low": 1, "severity_index": 0.55}, {"id": "CA", "name": "California", "high": 0, "medium": 1, "low": 1, "severity_index": 0.35}]},
+            "insight_summary": "Engine-related issues are mostly oil and coolant. Oil leaks and filter condition are the top drivers. Regular fluid checks can reduce failures.",
+        },
+        "Electrical": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 2},
+                {"month": "Sep", "count": 1},
+                {"month": "Oct", "count": 1},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 0},
+                {"month": "Jan", "count": 1},
+            ],
+            "item_breakdown": [
+                {"item": "Battery & Connections", "pass": 9, "fail": 2, "monitor": 4},
+                {"item": "Wiring & Harness", "pass": 10, "fail": 2, "monitor": 3},
+                {"item": "Sensors", "pass": 11, "fail": 1, "monitor": 3},
+                {"item": "Lighting", "pass": 13, "fail": 1, "monitor": 1},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 1}, {"severity": "MEDIUM", "count": 2}, {"severity": "LOW", "count": 3}],
+            "top_recommended_actions": [
+                {"action": "Clean battery terminals / load test", "count": 3},
+                {"action": "Repair or replace damaged wiring", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-004", "equipment": "CAT D6 Dozer", "date": "2025-01-11", "result": "FAIL", "summary": "Battery voltage low; alternator output marginal"},
+            ],
+            "heatmap_global": [
+                {"id": "USA", "topo_id": "840", "name": "United States", "high": 1, "medium": 1, "low": 2, "severity_index": 0.45},
+                {"id": "DEU", "topo_id": "276", "name": "Germany", "high": 0, "medium": 1, "low": 1, "severity_index": 0.38},
+            ],
+            "heatmap_local": {"USA": [{"id": "TX", "name": "Texas", "high": 1, "medium": 0, "low": 0, "severity_index": 0.85}]},
+            "insight_summary": "Electrical failures are less frequent but often battery or wiring related. Load testing batteries during inspections can catch issues early.",
+        },
+        "Undercarriage": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 1},
+                {"month": "Sep", "count": 1},
+                {"month": "Oct", "count": 1},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 0},
+                {"month": "Jan", "count": 1},
+            ],
+            "item_breakdown": [
+                {"item": "Track Tension", "pass": 8, "fail": 1, "monitor": 6},
+                {"item": "Rollers & Idlers", "pass": 10, "fail": 2, "monitor": 3},
+                {"item": "Sprockets", "pass": 11, "fail": 1, "monitor": 3},
+                {"item": "Track Pads", "pass": 9, "fail": 1, "monitor": 5},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 1}, {"severity": "MEDIUM", "count": 2}, {"severity": "LOW", "count": 2}],
+            "top_recommended_actions": [
+                {"action": "Adjust track tension", "count": 3},
+                {"action": "Replace worn rollers", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-007", "equipment": "CAT D6 Dozer", "date": "2025-01-07", "result": "MONITOR", "summary": "Track tension at upper limit; re-check in 2 weeks"},
+            ],
+            "heatmap_global": [{"id": "USA", "topo_id": "840", "name": "United States", "high": 0, "medium": 1, "low": 2, "severity_index": 0.35}, {"id": "CAN", "topo_id": "124", "name": "Canada", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}],
+            "heatmap_local": {"USA": [{"id": "TX", "name": "Texas", "high": 0, "medium": 1, "low": 1, "severity_index": 0.4}]},
+            "insight_summary": "Undercarriage issues are often tension and wear. Regular tension checks and pad wear monitoring help avoid unexpected downtime.",
+        },
+        "Attachments": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 0},
+                {"month": "Sep", "count": 1},
+                {"month": "Oct", "count": 1},
+                {"month": "Nov", "count": 0},
+                {"month": "Dec", "count": 1},
+                {"month": "Jan", "count": 0},
+            ],
+            "item_breakdown": [
+                {"item": "Bucket / Blade Condition", "pass": 12, "fail": 1, "monitor": 2},
+                {"item": "Pins & Bushings", "pass": 10, "fail": 2, "monitor": 3},
+                {"item": "Cutting Edges", "pass": 11, "fail": 1, "monitor": 3},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 0}, {"severity": "MEDIUM", "count": 1}, {"severity": "LOW", "count": 2}],
+            "top_recommended_actions": [
+                {"action": "Replace worn pins and bushings", "count": 2},
+                {"action": "Replace cutting edges", "count": 1},
+            ],
+            "recent_inspections": [
+                {"id": "insp-009", "equipment": "CAT 320 Excavator", "date": "2025-01-04", "result": "MONITOR", "summary": "Bucket teeth wear; schedule replacement"},
+            ],
+            "heatmap_global": [{"id": "USA", "topo_id": "840", "name": "United States", "high": 0, "medium": 1, "low": 2, "severity_index": 0.32}],
+            "heatmap_local": {"USA": [{"id": "AZ", "name": "Arizona", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}]},
+            "insight_summary": "Attachment failures are the lowest. Focus on pins, bushings, and cutting edges to extend attachment life.",
+        },
+    }
+    data = base.get(category)
+    if not data:
+        # Default template for unknown category
+        data = {
+            "failures_over_time": MOCK_ANALYTICS["inspections_over_time"],
+            "item_breakdown": [{"item": "Item A", "pass": 5, "fail": 2, "monitor": 1}, {"item": "Item B", "pass": 6, "fail": 1, "monitor": 0}],
+            "severity_breakdown": [{"severity": "HIGH", "count": 0}, {"severity": "MEDIUM", "count": 1}, {"severity": "LOW", "count": 1}],
+            "top_recommended_actions": [{"action": "Review and repair", "count": 1}],
+            "recent_inspections": [],
+            "heatmap_global": [{"id": "USA", "topo_id": "840", "name": "United States", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}],
+            "heatmap_local": {},
+            "insight_summary": f"Inspection data for {category}.",
+        }
+    return data
+
 MOCK_INSPECTION_DETAIL = {
     "id": "insp-002",
     "equipment_model": "CAT D6 Dozer",
@@ -526,6 +714,368 @@ async def finish_inspection(inspection_id: str):
 async def get_analytics():
     """Get analytics data for dashboard"""
     return MOCK_ANALYTICS
+
+
+@api_router.get("/analytics/category/{category}")
+async def get_analytics_by_category(category: str):
+    """Get detailed analytics for a specific category (e.g. Hydraulics, Engine)."""
+    name_in_url = (category or "").strip()
+    category_key = next(
+        (c["category"] for c in MOCK_ANALYTICS["failed_parts"] if c["category"].lower() == name_in_url.lower()),
+        name_in_url or "Other",
+    )
+    detail = _category_analytics(category_key)
+    part_row = next((p for p in MOCK_ANALYTICS["failed_parts"] if p["category"].lower() == category_key.lower()), None)
+    return {
+        "category": category_key,
+        "total_failures": part_row["count"] if part_row else 0,
+        "percentage_of_all": part_row["percentage"] if part_row else 0,
+        **detail,
+    }
+
+
+# ---------- Export: PDF (single report) and CSV (all + analytics) ----------
+def _build_inspection_pdf(detail: dict) -> bytes:
+    """Build a PDF report for one inspection using reportlab."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(name="Title", parent=styles["Heading1"], fontSize=16, spaceAfter=12)
+    h2_style = ParagraphStyle(name="H2", parent=styles["Heading2"], fontSize=12, spaceAfter=6, spaceBefore=12)
+
+    story = []
+    story.append(Paragraph("CAT Inspect – Inspection Report", title_style))
+    story.append(Spacer(1, 0.2 * inch))
+
+    # Meta (ensure no None for reportlab)
+    def _s(v):
+        return str(v).strip() if v is not None else ""
+
+    meta = [
+        ["Equipment", _s(detail.get("equipment_model"))],
+        ["Serial", _s(detail.get("serial_number"))],
+        ["Customer", _s(detail.get("customer"))],
+        ["Location", _s(detail.get("location"))],
+        ["Date", _s(detail.get("date"))],
+        ["Type", _s(detail.get("inspection_type"))],
+        ["Status", _s(detail.get("status"))],
+        ["Inspector", _s(detail.get("inspector"))],
+    ]
+    t = Table(meta, colWidths=[1.2 * inch, 4.3 * inch])
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (0, -1), 9),
+        ("FONTSIZE", (1, 0), (1, -1), 9),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.grey),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.25 * inch))
+
+    summary = (detail.get("summary") or "").strip()
+    if summary:
+        story.append(Paragraph("Summary", h2_style))
+        story.append(Paragraph(summary.replace("\n", "<br/>"), styles["Normal"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+    safety = detail.get("safety_findings") or []
+    if safety:
+        story.append(Paragraph("Safety findings", h2_style))
+        for s in safety:
+            story.append(Paragraph(f"• {_s(s)}", styles["Normal"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+    actions = detail.get("action_items") or []
+    if actions:
+        story.append(Paragraph("Action items", h2_style))
+        rows = [["Priority", "Action", "Risk", "Reason"]]
+        for a in actions:
+            rows.append([
+                str(a.get("priority") if a.get("priority") is not None else ""),
+                _s(a.get("action")),
+                _s(a.get("risk")),
+                _s(a.get("why")),
+            ])
+        t2 = Table(rows, colWidths=[0.6 * inch, 2.2 * inch, 1.4 * inch, 1.3 * inch])
+        t2.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F7B500")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("ALIGN", (0, 0), (0, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(t2)
+        story.append(Spacer(1, 0.2 * inch))
+
+    checklist = detail.get("checklist") or []
+    if checklist:
+        story.append(Paragraph("Checklist", h2_style))
+        rows = [["Category", "Item", "Result", "Severity", "Recommended action"]]
+        for c in checklist:
+            rows.append([
+                _s(c.get("category")),
+                _s(c.get("item")),
+                _s(c.get("result")),
+                _s(c.get("severity")),
+                _s(c.get("recommended_action")),
+            ])
+        t3 = Table(rows, colWidths=[1.1 * inch, 1.8 * inch, 0.7 * inch, 0.7 * inch, 1.2 * inch])
+        t3.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E2E8F0")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t3)
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+@api_router.get("/export/inspection/{inspection_id}/pdf")
+async def export_inspection_pdf(inspection_id: str):
+    """Export a single inspection report as PDF."""
+    detail = await get_inspection(inspection_id)
+    pdf_bytes = _build_inspection_pdf(detail)
+    filename = f"inspection-report-{inspection_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=\"{filename}\""},
+    )
+
+
+@api_router.get("/export/all")
+async def export_all_csv():
+    """Export all inspections and analytics as a single CSV for Google Sheets. Includes sections for charts."""
+    inspections = await get_inspections()
+    analytics = MOCK_ANALYTICS
+    buf = io.StringIO()
+    w = csv.writer(buf)
+
+    w.writerow(["CAT Inspect – Full Export (CSV)"])
+    w.writerow([datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")])
+    w.writerow(["Import into Google Sheets, then use Insert > Chart on any data block below to create graphs."])
+    w.writerow([])
+
+    w.writerow(["INSPECTIONS (detail)"])
+    w.writerow([
+        "ID", "Equipment", "Serial", "Customer", "Location", "Date", "Type", "Status", "Inspector",
+        "Safety findings count", "Action items count", "Summary"
+    ])
+    for i in inspections:
+        safety = i.get("safety_findings") or []
+        actions = i.get("action_items") or []
+        w.writerow([
+            i.get("id", ""),
+            i.get("equipment_model", ""),
+            i.get("serial_number", ""),
+            i.get("customer", ""),
+            i.get("location", ""),
+            i.get("date", ""),
+            i.get("inspection_type", ""),
+            i.get("status", ""),
+            i.get("inspector", ""),
+            len(safety),
+            len(actions),
+            ((i.get("summary") or "")[:300]),
+        ])
+    w.writerow([])
+
+    w.writerow(["ANALYTICS – Failed parts by category (Bar chart: Category = X, Count = Y)"])
+    w.writerow(["Category", "Count", "Percentage"])
+    for p in (analytics.get("failed_parts") or []):
+        w.writerow([p.get("category", ""), p.get("count", ""), p.get("percentage", "")])
+    w.writerow([])
+
+    w.writerow(["ANALYTICS – Inspections over time (Line chart: Month = X, Count = Y)"])
+    w.writerow(["Month", "Count"])
+    for r in (analytics.get("inspections_over_time") or []):
+        w.writerow([r.get("month", ""), r.get("count", "")])
+    w.writerow([])
+
+    w.writerow(["ANALYTICS – Pass / Fail / Monitor (Pie chart: Outcome = labels, Count = values)"])
+    w.writerow(["Outcome", "Count"])
+    pfm = analytics.get("pass_fail_monitor") or {}
+    for label, key in [("Pass", "pass"), ("Fail", "fail"), ("Monitor", "monitor")]:
+        w.writerow([label, pfm.get(key, 0)])
+    w.writerow([])
+
+    for cat in ["Hydraulics", "Engine", "Electrical"]:
+        cad = _category_analytics(cat)
+        w.writerow([f"ANALYTICS – {cat} failures over time (Line chart)"])
+        w.writerow(["Month", "Count"])
+        for r in (cad.get("failures_over_time") or []):
+            w.writerow([r.get("month", ""), r.get("count", "")])
+        w.writerow([])
+
+    w.writerow(["Chart tips: Select the header row + data rows for a section, then Insert > Chart. Choose Bar, Line, or Pie."])
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": "attachment; filename=\"cat-inspect-export-all.csv\"",
+            "Content-Type": "text/csv; charset=utf-8",
+        },
+    )
+
+
+def _build_export_all_xlsx() -> bytes:
+    """Build an Excel workbook with inspection data and embedded charts (bar, line, pie)."""
+    from openpyxl import Workbook
+    from openpyxl.chart import BarChart, LineChart, PieChart, Reference
+
+    wb = Workbook()
+    inspections = list(MOCK_INSPECTIONS)
+    analytics = MOCK_ANALYTICS
+    failed_parts = analytics.get("failed_parts") or []
+    over_time = analytics.get("inspections_over_time") or []
+    pfm = analytics.get("pass_fail_monitor") or {}
+
+    # ---- Sheet 1: Inspections ----
+    ws_insp = wb.active
+    ws_insp.title = "Inspections"
+    ws_insp.append([
+        "ID", "Equipment", "Serial", "Customer", "Location", "Date", "Type", "Status", "Inspector",
+        "Safety #", "Actions #", "Summary"
+    ])
+    for i in inspections:
+        safety = i.get("safety_findings") or []
+        actions = i.get("action_items") or []
+        ws_insp.append([
+            i.get("id", ""),
+            i.get("equipment_model", ""),
+            i.get("serial_number", ""),
+            i.get("customer", ""),
+            i.get("location", ""),
+            i.get("date", ""),
+            i.get("inspection_type", ""),
+            i.get("status", ""),
+            i.get("inspector", ""),
+            len(safety),
+            len(actions),
+            (i.get("summary") or "")[:200],
+        ])
+
+    n_fp = len(failed_parts)
+    n_ot = len(over_time)
+
+    # ---- Sheet 2: Failed Parts + Bar Chart ----
+    ws_fp = wb.create_sheet("Failed Parts", 1)
+    ws_fp.append(["Category", "Count", "Percentage"])
+    for p in failed_parts:
+        ws_fp.append([p.get("category", ""), p.get("count", 0), p.get("percentage", 0)])
+    if n_fp >= 1:
+        try:
+            chart_bar = BarChart()
+            chart_bar.type = "col"
+            chart_bar.title = "Failures by Category"
+            chart_bar.y_axis.title = "Count"
+            chart_bar.x_axis.title = "Category"
+            data = Reference(ws_fp, min_col=2, min_row=1, max_col=2, max_row=n_fp + 1)
+            cats = Reference(ws_fp, min_col=1, min_row=2, max_row=n_fp + 1)
+            chart_bar.add_data(data, titles_from_data=True)
+            chart_bar.set_categories(cats)
+            chart_bar.width = 14
+            chart_bar.height = 8
+            ws_fp.add_chart(chart_bar, "E2")
+        except Exception:
+            pass
+
+    # ---- Sheet 3: Inspections Over Time + Line Chart ----
+    ws_ot = wb.create_sheet("Over Time", 2)
+    ws_ot.append(["Month", "Count"])
+    for r in over_time:
+        ws_ot.append([r.get("month", ""), r.get("count", 0)])
+    if n_ot >= 1:
+        try:
+            chart_line = LineChart()
+            chart_line.title = "Inspections Over Time"
+            chart_line.y_axis.title = "Count"
+            chart_line.x_axis.title = "Month"
+            data = Reference(ws_ot, min_col=2, min_row=1, max_col=2, max_row=n_ot + 1)
+            cats = Reference(ws_ot, min_col=1, min_row=2, max_row=n_ot + 1)
+            chart_line.add_data(data, titles_from_data=True)
+            chart_line.set_categories(cats)
+            chart_line.width = 14
+            chart_line.height = 8
+            ws_ot.add_chart(chart_line, "E2")
+        except Exception:
+            pass
+
+    # ---- Sheet 4: Outcomes + Pie Chart ----
+    ws_oc = wb.create_sheet("Outcomes", 3)
+    ws_oc.append(["Outcome", "Count"])
+    for label, key in [("Pass", "pass"), ("Fail", "fail"), ("Monitor", "monitor")]:
+        ws_oc.append([label, pfm.get(key, 0)])
+    try:
+        chart_pie = PieChart()
+        chart_pie.title = "Inspection Outcomes"
+        data = Reference(ws_oc, min_col=2, min_row=1, max_col=2, max_row=4)
+        cats = Reference(ws_oc, min_col=1, min_row=2, max_row=4)
+        chart_pie.add_data(data, titles_from_data=True)
+        chart_pie.set_categories(cats)
+        chart_pie.width = 10
+        chart_pie.height = 8
+        ws_oc.add_chart(chart_pie, "E2")
+    except Exception:
+        pass
+
+    # ---- Sheet 5: Hydraulics Over Time ----
+    cad = _category_analytics("Hydraulics")
+    fot = cad.get("failures_over_time") or []
+    ws_hy = wb.create_sheet("Hydraulics Trend", 4)
+    ws_hy.append(["Month", "Failures"])
+    for r in fot:
+        ws_hy.append([r.get("month", ""), r.get("count", 0)])
+    if len(fot) >= 1:
+        try:
+            chart_hy = LineChart()
+            chart_hy.title = "Hydraulics Failures Over Time"
+            chart_hy.y_axis.title = "Failures"
+            n_hy = len(fot) + 1
+            data = Reference(ws_hy, min_col=2, min_row=1, max_col=2, max_row=n_hy)
+            cats = Reference(ws_hy, min_col=1, min_row=2, max_row=n_hy)
+            chart_hy.add_data(data, titles_from_data=True)
+            chart_hy.set_categories(cats)
+            chart_hy.width = 12
+            chart_hy.height = 7
+            ws_hy.add_chart(chart_hy, "E2")
+        except Exception:
+            pass
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+@api_router.get("/export/all/excel")
+async def export_all_excel():
+    """Export all inspections and analytics as Excel (.xlsx) with embedded charts (bar, line, pie)."""
+    try:
+        xlsx_bytes = _build_export_all_xlsx()
+    except Exception as e:
+        logging.exception("Excel export failed: %s", e)
+        raise HTTPException(status_code=500, detail="Excel export failed. Try CSV export instead.")
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=\"cat-inspect-export-all.xlsx\"",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
+    )
+
 
 # Document upload for chatbot context (PDF)
 @api_router.post("/documents/upload")
