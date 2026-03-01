@@ -45,6 +45,7 @@ export const AnalyticsCards = ({ analytics }) => {
       {/* Most Failed Parts */}
       <div className="analytics-card">
         <div className="analytics-header">
+          <div className="w-8 h-8 rounded-lg bg-red-500/8 dark:bg-red-500/10 flex items-center justify-center">
           <div className="icon-glass icon-glass-md icon-glass-red">
             <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
           </div>
@@ -75,10 +76,10 @@ export const AnalyticsCards = ({ analytics }) => {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#fff',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid rgba(0,0,0,0.06)',
                     borderRadius: '8px',
                     fontSize: '12px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                   }}
                   formatter={(value, name, props) => [
                     `${value} failures (${props.payload.percentage}%)`,
@@ -112,6 +113,7 @@ export const AnalyticsCards = ({ analytics }) => {
       {/* Inspections Over Time */}
       <div className="analytics-card">
         <div className="analytics-header">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/8 dark:bg-blue-500/10 flex items-center justify-center">
           <div className="icon-glass icon-glass-md icon-glass-blue">
             <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
@@ -143,10 +145,10 @@ export const AnalyticsCards = ({ analytics }) => {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#fff',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid rgba(0,0,0,0.06)',
                     borderRadius: '8px',
                     fontSize: '12px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                   }}
                 />
                 <Line
@@ -169,6 +171,7 @@ export const AnalyticsCards = ({ analytics }) => {
       {/* Pass vs Fail vs Monitor */}
       <div className="analytics-card">
         <div className="analytics-header">
+          <div className="w-8 h-8 rounded-lg bg-violet-500/8 dark:bg-violet-500/10 flex items-center justify-center">
           <div className="icon-glass icon-glass-md icon-glass-violet">
             <PieChartIcon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
           </div>
@@ -198,10 +201,10 @@ export const AnalyticsCards = ({ analytics }) => {
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#fff',
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid rgba(0,0,0,0.06)',
                       borderRadius: '8px',
                       fontSize: '12px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                     }}
                   />
                 </PieChart>
@@ -228,7 +231,7 @@ export const AnalyticsCards = ({ analytics }) => {
           </div>
         </div>
         <div className="px-4 pb-3 pt-0">
-          <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+          <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/8 dark:bg-emerald-500/10 rounded-lg">
             <span className="text-[20px] font-bold text-emerald-600 dark:text-emerald-400">{passRate}%</span>
             <span className="text-[11px] text-emerald-700 dark:text-emerald-400">Pass Rate</span>
           </div>

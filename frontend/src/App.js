@@ -12,6 +12,18 @@ import InspectionDetail from "@/pages/InspectionDetail";
 
 function App() {
   return (
+    <div className="min-h-screen bg-background transition-colors">
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="/app" element={<Layout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="inspections/new" element={<NewInspection />} />
+            <Route path="inspections/:id/live" element={<LiveInspection />} />
+            <Route path="inspections/:id" element={<InspectionDetail />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
     <div className="min-h-screen bg-gray-50">
       <AuthProvider>
         <BrowserRouter>

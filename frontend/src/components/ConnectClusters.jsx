@@ -41,6 +41,23 @@ export const ConnectClusters = ({ clusters = [] }) => {
 
       {detailed.map((item) => (
         <div
+          key={cluster.id}
+          className="card-enterprise p-4 group cursor-pointer"
+          onClick={() => navigate(`/app/inspections/${cluster.id}`)}
+          data-testid={`cluster-${cluster.id}`}
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+              {index === 0 ? (
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              ) : (
+                <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="font-semibold text-[14px] text-slate-900 dark:text-white truncate group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
+                  {cluster.title}
           key={item.id}
           className={cn(
             "card-enterprise overflow-hidden",

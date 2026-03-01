@@ -103,6 +103,25 @@ module.exports = {
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
+  			'accordion-up': 'accordion-up 0.2s ease-out'
+  		},
+  		fontSize: {
+  			'display': ['24px', { lineHeight: '1.2', fontWeight: '600' }],
+  			'heading': ['16px', { lineHeight: '1.4', fontWeight: '600' }],
+  			'body': ['14px', { lineHeight: '1.6', fontWeight: '400' }],
+  			'caption': ['13px', { lineHeight: '1.5', fontWeight: '500' }],
+  			'meta': ['12px', { lineHeight: '1.4', fontWeight: '500' }],
+  			'micro': ['11px', { lineHeight: '1.3', fontWeight: '600' }],
+  		},
+  		transitionDuration: {
+  			'apple': '180ms',
+  		},
+  		transitionTimingFunction: {
+  			'apple': 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+  		},
+  		backdropBlur: {
+  			'2xl': '40px',
+  			'3xl': '64px',
   			'accordion-up': 'accordion-up 0.2s ease-out',
   			'gradient-pulse': 'gradient-pulse 6s ease-in-out infinite',
   			'float': 'float 15s ease-in-out infinite',

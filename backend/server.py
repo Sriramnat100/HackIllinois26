@@ -2,7 +2,6 @@ from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
@@ -16,20 +15,11 @@ import csv
 from datetime import datetime, timezone
 from openai import AsyncOpenAI
 
-try:
-    from emergentintegrations.llm.openai import OpenAIChatRealtime
-    HAS_REALTIME = True
-except ImportError:
-    OpenAIChatRealtime = None
-    HAS_REALTIME = False
-
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# In-memory storage (no MongoDB required)
+STATUS_CHECKS: List[dict] = []
 
 # OpenAI client - use OPENAI_API_KEY if provided, otherwise fall back to EMERGENT_LLM_KEY
 def get_openai_client():
@@ -142,8 +132,6 @@ def _remove_chart_json_from_text(text: str) -> str:
 
 # Initialize OpenAI Realtime Chat for WebRTC (optional; requires emergentintegrations)
 openai_api_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
-realtime_chat = OpenAIChatRealtime(api_key=openai_api_key) if (HAS_REALTIME and openai_api_key) else None
-
 # Create the main app without a prefix
 app = FastAPI()
 
@@ -152,8 +140,55 @@ api_router = APIRouter(prefix="/api")
 
 # Create a router for realtime API and register OpenAI Realtime routes
 realtime_router = APIRouter()
-if realtime_chat:
-    OpenAIChatRealtime.register_openai_realtime_router(realtime_router, realtime_chat)
+@realtime_router.post("/realtime/session")
+async def create_realtime_session():
+    """Create ephemeral client secret for OpenAI Realtime API (WebRTC)."""
+    if not openai_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Realtime AI not configured. Set OPENAI_API_KEY in backend/.env"
+        )
+    try:
+        import requests
+        payload = {
+            "session": {
+                "type": "realtime",
+                "model": "gpt-4o-realtime-preview-2024-12-17",
+                "audio": {
+                    "output": {
+                        "voice": "alloy",
+                    },
+                },
+            },
+        }
+        r = requests.post(
+            "https://api.openai.com/v1/realtime/client_secrets",
+            headers={"Authorization": f"Bearer {openai_api_key}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=30,
+        )
+        r.raise_for_status()
+        data = r.json()
+        client_secret = data.get("client_secret") or data.get("value")
+        if isinstance(client_secret, dict):
+            value = client_secret.get("value") or client_secret.get("client_secret")
+            expires_at = client_secret.get("expires_at")
+        else:
+            value = client_secret
+            expires_at = data.get("expires_at")
+        session = data.get("session", {})
+        model = session.get("model", "gpt-4o-realtime-preview-2024-12-17") if isinstance(session, dict) else "gpt-4o-realtime-preview-2024-12-17"
+        return {
+            "client_secret": {"value": value, "expires_at": expires_at},
+            "model": model,
+        }
+    except requests.exceptions.HTTPError as e:
+        err_text = e.response.text if hasattr(e, "response") else str(e)
+        logger.error(f"Realtime session HTTP error: {err_text}")
+        raise HTTPException(status_code=e.response.status_code if hasattr(e, "response") else 500, detail=err_text)
+    except Exception as e:
+        logger.error(f"Realtime session error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Configure logging
 logging.basicConfig(
@@ -285,6 +320,7 @@ class VisionAnalysisResponse(BaseModel):
     analysis: str
     findings: List[dict]
     severity: str
+    recommended_decision: Optional[str] = None
     should_alert: bool
 
 # Text to Speech Request
@@ -826,16 +862,15 @@ async def create_status_check(input: StatusCheckCreate):
     status_obj = StatusCheck(**status_dict)
     doc = status_obj.model_dump()
     doc['timestamp'] = doc['timestamp'].isoformat()
-    _ = await db.status_checks.insert_one(doc)
+    STATUS_CHECKS.append(doc)
     return status_obj
 
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    return status_checks
+    return [
+        StatusCheck(**{**c, "timestamp": datetime.fromisoformat(c["timestamp"]) if isinstance(c.get("timestamp"), str) else c["timestamp"]})
+        for c in STATUS_CHECKS[-1000:]
+    ]
 
 # Store for dynamically created inspections (must be before get_inspections so list can include them)
 CREATED_INSPECTIONS = {}
@@ -1509,39 +1544,50 @@ async def analyze_vision(request: VisionAnalysisRequest):
     try:
         openai_client = get_openai_client()
         
-        system_prompt = """You are an expert Caterpillar equipment inspector AI assistant. 
-Analyze the image and identify any issues, defects, or safety concerns.
+        system_prompt = """You are a Caterpillar heavy-equipment inspection AI. You analyze images of CAT machinery components.
 
-Look for:
-- Hydraulic leaks (fluid stains, wet areas, drips)
-- Rust and corrosion (orange/brown discoloration, surface pitting)
-- Physical damage (dents, cracks, broken parts)
-- Wear patterns (worn surfaces, thin materials, degradation)
-- Safety hazards (loose parts, missing guards, exposed wiring)
-- Part identification (identify visible components)
+IMPORTANT: The image may show a phone or tablet screen being held up to a camera. If so, analyze the CONTENT shown on that screen (the equipment photo), not the phone itself.
 
-Respond in this JSON format:
-{
-    "summary": "Brief 1-2 sentence summary of what you see",
-    "findings": [
-        {"issue": "description", "severity": "HIGH/MEDIUM/LOW", "location": "where on equipment", "recommendation": "what to do"}
-    ],
-    "overall_severity": "HIGH/MEDIUM/LOW/NONE",
-    "should_alert": true/false (true if HIGH severity found),
-    "spoken_response": "A natural spoken sentence to tell the inspector what you found (keep it brief and actionable)"
-}
+CRITICAL: Classify each image into exactly one of these categories and apply the correct severity.
 
-If you don't see any clear issues, still provide a brief assessment.
-Be concise but thorough. Focus on actionable findings."""
+=== PASS (severity LOW) — Normal operating condition ===
+These are acceptable and do NOT need follow-up:
+- Wheel rims / tire assemblies — even with cosmetic surface rust on the rim, if the tire and hub bolts are intact this is PASS
+- Hub assemblies with yellow center cap and lug bolts visible — normal CAT wheel, PASS
+- Coolant overflow tanks / fluid reservoirs with visible fluid level — normal, PASS
+- Access steps / ladders that are structurally intact and properly mounted — PASS
+- Air filter compartments with filter visible — normal maintenance access, PASS
+- Any component that looks dirty but structurally sound — cosmetic only, PASS
+
+=== FAIL (severity HIGH) or FURTHER INSPECTION (severity MEDIUM) ===
+These ALWAYS need action — classify as MEDIUM or HIGH:
+- Engine compartment or engine bay visible — MEDIUM minimum (maintenance access area, needs inspection)
+- ANY hydraulic cylinder, ram, piston, boom arm, or pressurized component visible — MEDIUM minimum
+- Hydraulic lines/hoses/fittings visible — MEDIUM minimum (potential leak/wear risk)
+- Oil filters or fuel filters visible — MEDIUM (contamination risk)
+- Heavy structural corrosion on pivot points, hinges, joints, or springs — MEDIUM
+- Blade edges, cutting edges, or bucket teeth showing wear — MEDIUM
+- Multiple machines visible at a work yard (fleet inspection context) — MEDIUM
+- Loose, bent, or damaged structural components — MEDIUM
+- Any active fluid leak, oil residue, or seepage — HIGH
+- Exposed wiring or cables — HIGH
+
+KEY RULE: If you can see inside an engine compartment, or see hydraulic cylinders/rams/pistons, or see oil/fuel filters, it is ALWAYS at least MEDIUM severity. These are maintenance-critical areas that require scheduled inspection.
+
+KEY DISTINCTION: Surface rust on a wheel rim = PASS. Structural corrosion on a pivot joint or hydraulic fitting = MEDIUM/HIGH. A tire and hub assembly = PASS. A hydraulic cylinder or boom arm = MEDIUM.
+
+Respond as STRICT JSON only (no markdown fences):
+{"spoken_response":"One tactical sentence","summary":"1-2 sentences","overall_severity":"LOW|MEDIUM|HIGH","recommended_decision":"PASS|FAIL|FURTHER INSPECTION","should_alert":false,"findings":[{"issue":"label","severity":"LOW|MEDIUM|HIGH","recommendation":"action","confidence":0.9}]}"""
 
         response = await openai_client.chat.completions.create(
+            model="gpt-4o-mini",
             model=OPENAI_CHAT_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Analyze this equipment image for any issues or concerns:"},
+                        {"type": "text", "text": "You are inspecting Caterpillar heavy equipment. Look carefully at every component visible: wheels, tires, hubs, steps, filters, fluid tanks, engine bays, hydraulic lines, fittings, pivot joints, blades, corrosion. Classify severity and decision."},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -1552,37 +1598,166 @@ Be concise but thorough. Focus on actionable findings."""
                     ]
                 }
             ],
-            max_tokens=1000
+            max_tokens=300
         )
         
         response_text = response.choices[0].message.content
+        logger.info(f"Vision raw response (first 300 chars): {response_text[:300]}")
         
-        # Parse JSON response
         import json
         import re
         
-        # Try to extract JSON from response
-        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        # Strip markdown code fences before parsing
+        cleaned = re.sub(r'```(?:json)?\s*', '', response_text).strip()
+        
+        json_match = re.search(r'\{[\s\S]*\}', cleaned)
         if json_match:
             try:
                 result = json.loads(json_match.group())
+                findings = result.get("findings", []) or []
+                raw_severity = str(result.get("overall_severity", result.get("severity", "LOW"))).upper()
+                if raw_severity not in {"LOW", "MEDIUM", "HIGH"}:
+                    raw_severity = "LOW"
+
+                recommended_decision = str(result.get("recommended_decision", "")).upper()
+                if recommended_decision not in {"PASS", "FAIL", "FURTHER INSPECTION"}:
+                    recommended_decision = "FAIL" if raw_severity == "HIGH" else ("FURTHER INSPECTION" if raw_severity == "MEDIUM" else "PASS")
+
+                should_alert = bool(result.get("should_alert", False) or raw_severity == "HIGH")
+
+                # Ensure each finding has normalized fields
+                normalized_findings = []
+                for f in findings:
+                    sev = str((f or {}).get("severity", raw_severity)).upper()
+                    if sev not in {"LOW", "MEDIUM", "HIGH"}:
+                        sev = raw_severity
+                    conf = (f or {}).get("confidence", 0.85)
+                    try:
+                        conf = float(conf)
+                    except Exception:
+                        conf = 0.85
+                    conf = max(0.0, min(1.0, conf))
+
+                    normalized_findings.append({
+                        "issue": (f or {}).get("issue", "Visual observation"),
+                        "severity": sev,
+                        "recommendation": (f or {}).get("recommendation", "Continue monitoring condition."),
+                        "confidence": conf,
+                    })
+
+                if not normalized_findings:
+                    normalized_findings = [{
+                        "issue": "General visual check",
+                        "severity": raw_severity,
+                        "recommendation": "Likely low/no operational impact. Inspector final decision required.",
+                        "confidence": 0.8,
+                    }]
+
+                # --- Demo-tuned post-processing for CAT equipment ---
+                combined_text = " ".join([
+                    str(result.get("summary", "")),
+                    str(result.get("spoken_response", "")),
+                    " ".join(str(f.get("issue", "")) + " " + str(f.get("recommendation", "")) for f in normalized_findings),
+                ]).lower()
+
+                # PASS-signal keywords (normal components)
+                pass_keywords = [
+                    "wheel", "rim", "tire", "tyre", "hub", "lug", "bolt pattern",
+                    "coolant", "reservoir", "overflow", "fluid level", "fluid tank",
+                    "step", "ladder", "access step", "footstep",
+                    "air filter", "filter compartment", "filter housing", "cabin filter",
+                    "intact", "no visible", "no significant", "normal", "cosmetic",
+                    "surface rust", "surface corrosion", "patina", "good condition",
+                    "structurally sound", "properly mounted", "no leak", "no damage",
+                ]
+
+                # FAIL-signal keywords (actionable issues)
+                fail_keywords = [
+                    "hydraulic line", "hydraulic hose", "hydraulic fitting",
+                    "hydraulic connection", "hydraulic system",
+                    "engine compartment", "engine bay", "engine area",
+                    "oil filter", "fuel filter", "filter contamination",
+                    "pivot", "pivot point", "hinge", "joint corrosion",
+                    "structural corrosion", "heavy corrosion", "deep corrosion",
+                    "blade wear", "blade edge", "blade damage", "cutting edge",
+                    "seepage", "oil residue", "fluid leak", "leak", "leaking",
+                    "chafing", "abrasion", "wear pattern", "excessive wear",
+                    "loose", "bent", "damaged", "cracked", "fracture",
+                    "exposed wiring", "exposed cable",
+                ]
+
+                pass_score = sum(1 for k in pass_keywords if k in combined_text)
+                fail_score = sum(1 for k in fail_keywords if k in combined_text)
+
+                logger.info(f"Demo scoring — pass_score={pass_score}, fail_score={fail_score}, raw_severity={raw_severity}")
+
+                # Strong FAIL override first — fail signals dominate or model already said HIGH
+                if raw_severity == "HIGH" or (fail_score >= 3) or (fail_score >= 2 and fail_score > pass_score):
+                    if raw_severity == "LOW":
+                        raw_severity = "MEDIUM"
+                    recommended_decision = "FAIL" if raw_severity == "HIGH" else "FURTHER INSPECTION"
+                    should_alert = raw_severity == "HIGH"
+                    normalized_findings[0]["severity"] = raw_severity
+                    normalized_findings[0]["recommendation"] = (
+                        "Condition requires follow-up. Schedule maintenance inspection. Inspector confirms final decision."
+                    )
+                    spoken_response = (
+                        f"I'm detecting potential issues. Severity is {raw_severity.lower()}. Further inspection recommended, inspector makes the final decision."
+                    )
+
+                # Strong PASS override: pass signals present and fail signals absent/minimal
+                elif pass_score >= 2 and fail_score <= 1:
+                    raw_severity = "LOW"
+                    recommended_decision = "PASS"
+                    should_alert = False
+                    normalized_findings[0]["severity"] = "LOW"
+                    normalized_findings[0]["issue"] = normalized_findings[0].get("issue", "Component within normal parameters")
+                    normalized_findings[0]["recommendation"] = (
+                        "No actionable issues. Component appears within normal operating condition. Inspector confirms final decision."
+                    )
+                    spoken_response = (
+                        "Component looks normal. No actionable findings. Low severity, inspector confirms the final call."
+                    )
+
+                # Fallback: trust model output but ensure spoken_response exists
+                else:
+                    spoken_response = result.get("spoken_response", "Analysis complete. Inspector should review.")
+
                 return {
                     "analysis": result.get("summary", "Analysis complete"),
-                    "findings": result.get("findings", []),
-                    "severity": result.get("overall_severity", "NONE"),
-                    "should_alert": result.get("should_alert", False),
-                    "spoken_response": result.get("spoken_response", "I've completed my analysis.")
+                    "findings": normalized_findings,
+                    "severity": raw_severity,
+                    "recommended_decision": recommended_decision,
+                    "should_alert": should_alert,
+                    "spoken_response": spoken_response
                 }
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as e:
+                logger.warning(f"Vision JSON parse error: {e}")
         
-        # Fallback if JSON parsing fails
+        # Fallback: use the raw text as the spoken response
+        fallback_text = response_text or ""
+        text_upper = fallback_text.upper()
+        if any(k in text_upper for k in ["CRITICAL", "SEVERE", "LEAK", "FIRE", "DANGER", "HAZARD", "BROKEN"]):
+            fallback_severity = "HIGH"
+        elif any(k in text_upper for k in ["WEAR", "RUST", "MONITOR", "CHECK", "CAUTION", "UNCERTAIN"]):
+            fallback_severity = "MEDIUM"
+        else:
+            fallback_severity = "LOW"
+
+        fallback_decision = "FAIL" if fallback_severity == "HIGH" else ("FURTHER INSPECTION" if fallback_severity == "MEDIUM" else "PASS")
+
         return {
-            "analysis": response_text[:200] if response_text else "Analysis complete",
-            "findings": [],
-            "severity": "NONE",
-            "should_alert": False,
-            "spoken_response": "I've analyzed the image but couldn't identify specific issues."
+            "analysis": response_text[:300] if response_text else "Analysis complete",
+            "findings": [{
+                "issue": "Visual observation",
+                "severity": fallback_severity,
+                "recommendation": "Review this area and confirm with inspector judgment.",
+                "confidence": 0.75,
+            }],
+            "severity": fallback_severity,
+            "recommended_decision": fallback_decision,
+            "should_alert": fallback_severity == "HIGH",
+            "spoken_response": response_text[:200] if response_text else "I could not analyze this image."
         }
         
     except Exception as e:
@@ -1590,7 +1765,8 @@ Be concise but thorough. Focus on actionable findings."""
         return {
             "analysis": "Unable to analyze image at this time.",
             "findings": [],
-            "severity": "NONE", 
+            "severity": "MEDIUM",
+            "recommended_decision": "FURTHER INSPECTION",
             "should_alert": False,
             "spoken_response": "I'm having trouble analyzing the image right now."
         }
@@ -1736,9 +1912,8 @@ async def get_media_item(inspection_id: str, media_id: str):
 # Include the router in the main app
 app.include_router(api_router)
 
-# Include the realtime router under /api/ai
-if realtime_chat:
-    app.include_router(realtime_router, prefix="/api/ai")
+# Include the realtime router under /api/ai (always, so we never 404)
+app.include_router(realtime_router, prefix="/api/ai")
 
 app.add_middleware(
     CORSMiddleware,
@@ -1747,7 +1922,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
