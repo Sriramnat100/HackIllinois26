@@ -118,7 +118,7 @@ export const MediaGallery = ({ media = [] }) => {
 
       {filteredMedia.length === 0 && (
         <div className="text-center py-16">
-          <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <div className="icon-glass icon-glass-2xl rounded-full mx-auto mb-4">
             <ImageIcon className="w-7 h-7 text-slate-300 dark:text-white/70" />
           </div>
           <p className="text-[14px] font-medium text-slate-500 dark:text-white">No media found</p>

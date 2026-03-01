@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
+from fastapi.responses import Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,6 +11,8 @@ from typing import List, Optional, Any
 import uuid
 import json
 import re
+import io
+import csv
 from datetime import datetime, timezone
 from openai import AsyncOpenAI
 
@@ -80,6 +83,62 @@ def _extract_chart_json(text: str) -> Optional[dict]:
                     pass
                 return None
     return None
+
+
+def _strip_markdown(text: str) -> str:
+    """Remove common Markdown from model output so the UI shows plain text."""
+    if not text:
+        return text
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    text = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"\1", text)
+    text = re.sub(r"(?<!_)_([^_]+)_(?!_)", r"\1", text)
+    return text.strip()
+
+
+def _remove_chart_json_from_text(text: str) -> str:
+    """Remove the chart JSON block (and any ```json ... ``` wrapper) so the UI doesn't show raw JSON."""
+    if not text or "chart_type" not in text.lower():
+        return text
+    start = text.find('{"chart_type"')
+    if start == -1:
+        start = text.find("{\"chart_type\"")
+    if start == -1:
+        return text
+    depth = 0
+    end = start
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end <= start:
+        return text
+    line_start = text.rfind("\n", 0, start) + 1
+    before_block = text[line_start:start].strip()
+    if before_block == "```json" or before_block == "```":
+        start = line_start
+    rest = text[end:].lstrip()
+    if rest.startswith("```"):
+        newline_after = rest.find("\n", 3)
+        end = end + (len(text[end:]) - len(rest)) + (newline_after + 1 if newline_after >= 0 else len(rest))
+    result = (text[:start] + text[end:]).strip()
+    lines = result.split("\n")
+    out = []
+    for line in lines:
+        s = line.strip()
+        if s in ("```", "```json"):
+            continue
+        if s.lower().startswith("here") and "json" in s.lower():
+            continue
+        if "json representation" in s.lower() or "json representation for" in s.lower():
+            continue
+        out.append(line)
+    return "\n".join(out).strip()
+
 
 # Initialize OpenAI Realtime Chat for WebRTC (optional; requires emergentintegrations)
 openai_api_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
@@ -250,7 +309,7 @@ MOCK_INSPECTIONS = [
         "status": "PASS",
         "date": "2025-01-15",
         "inspector": "Sriram N.",
-        "summary": "Equipment in excellent condition. All systems operational.",
+        "summary": "This daily walkaround inspection of the CAT 320 Excavator (serial CAT0320X12345) was completed at BuildCo Industries, Dallas, TX. All major systems were checked and found to be operating within specification: hydraulics, engine, electrical, undercarriage, and safety equipment. No defects or abnormal wear were observed. The equipment is cleared for continued operation with no follow-up required before the next scheduled inspection.",
         "safety_findings": [],
         "action_items": []
     },
@@ -264,7 +323,7 @@ MOCK_INSPECTIONS = [
         "status": "FAIL",
         "date": "2025-01-14",
         "inspector": "Sriram N.",
-        "summary": "Critical hydraulic leak detected in main boom cylinder. Immediate repair required.",
+        "summary": "This safety inspection of the CAT D6 Dozer (serial CAT0D6X67890) at Highway Construction LLC, Austin, TX, identified a critical hydraulic leak in the main boom cylinder that requires immediate attention. The high-pressure line is compromised and was confirmed during visual inspection and pressure testing. All other systems—engine, stick cylinder, coolant, and safety equipment—were within normal parameters. The unit must be taken out of service until the hydraulic line is replaced to prevent equipment failure and safety risk.",
         "safety_findings": ["Hydraulic leak - High pressure line compromised"],
         "action_items": [
             {"priority": 1, "action": "Replace hydraulic line", "risk": "High - Equipment failure risk"},
@@ -281,7 +340,7 @@ MOCK_INSPECTIONS = [
         "status": "MONITOR",
         "date": "2025-01-13",
         "inspector": "Sriram N.",
-        "summary": "Minor wear on bucket teeth. Schedule replacement within 30 days.",
+        "summary": "This TA1 (Technical Assessment Level 1) inspection of the CAT 966 Wheel Loader (serial CAT0966X11111) at Quarry Masters Inc, Houston, TX, found the unit generally in good condition with one notable wear item: the bucket teeth show minor to moderate wear and should be scheduled for replacement within the next 30 days to avoid reduced productivity and potential damage to the bucket. Undercarriage, engine, hydraulics, and cab systems were within acceptable limits. A re-inspection in two weeks is recommended to monitor wear progression.",
         "safety_findings": [],
         "action_items": [
             {"priority": 1, "action": "Order replacement bucket teeth", "risk": "Low - Wear item"},
@@ -298,7 +357,7 @@ MOCK_INSPECTIONS = [
         "status": "PASS",
         "date": "2025-01-12",
         "inspector": "Sriram N.",
-        "summary": "All systems nominal. Tire pressure within spec.",
+        "summary": "This daily walkaround of the CAT 745 Articulated Truck (serial CAT0745X22222) at Mountain Mining Co, Denver, CO, was completed with no issues identified. Tire pressures were verified across all wheels and are within specification. Brake systems, steering, dump body hydraulics, and lighting were checked and found operational. The unit is approved for continued haul operations with no action items or follow-up required.",
         "safety_findings": [],
         "action_items": []
     },
@@ -312,7 +371,7 @@ MOCK_INSPECTIONS = [
         "status": "In Progress",
         "date": "2025-01-11",
         "inspector": "Sriram N.",
-        "summary": "",
+        "summary": "This safety inspection has not yet been completed. The CAT 336 Excavator (serial CAT0336X33333) at Urban Development Corp, Phoenix, AZ, is currently in progress. Once the inspector finishes the walkaround and checklist, the AI assistant will analyze findings and generate the full executive summary, safety findings, and action items here.",
         "safety_findings": [],
         "action_items": []
     }
@@ -341,6 +400,191 @@ MOCK_ANALYTICS = {
     }
 }
 
+# Detailed analytics per category (for category drill-down)
+def _category_analytics(category: str) -> dict:
+    """Mock detailed analytics for a category. Varies by category name."""
+    base = {
+        "Hydraulics": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 3},
+                {"month": "Sep", "count": 2},
+                {"month": "Oct", "count": 4},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 2},
+                {"month": "Jan", "count": 0},
+            ],
+            "item_breakdown": [
+                {"item": "Main Boom Cylinder", "pass": 8, "fail": 5, "monitor": 2},
+                {"item": "Stick Cylinder", "pass": 12, "fail": 1, "monitor": 2},
+                {"item": "Hydraulic Hoses", "pass": 6, "fail": 4, "monitor": 5},
+                {"item": "Pump & Reservoir", "pass": 10, "fail": 2, "monitor": 3},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 5}, {"severity": "MEDIUM", "count": 4}, {"severity": "LOW", "count": 3}],
+            "top_recommended_actions": [
+                {"action": "Replace high-pressure line", "count": 6},
+                {"action": "Inspect seals and fittings", "count": 4},
+                {"action": "Top off fluid / check for leaks", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-002", "equipment": "CAT D6 Dozer", "date": "2025-01-14", "result": "FAIL", "summary": "Hydraulic leak on main boom cylinder"},
+                {"id": "insp-005", "equipment": "CAT 320 Excavator", "date": "2025-01-10", "result": "FAIL", "summary": "Stick cylinder seal wear"},
+                {"id": "insp-008", "equipment": "CAT D6 Dozer", "date": "2025-01-05", "result": "MONITOR", "summary": "Minor hose wear observed"},
+            ],
+            "heatmap_global": [
+                {"id": "USA", "topo_id": "840", "name": "United States", "high": 4, "medium": 3, "low": 2, "severity_index": 0.72},
+                {"id": "CAN", "topo_id": "124", "name": "Canada", "high": 1, "medium": 2, "low": 1, "severity_index": 0.55},
+                {"id": "GBR", "topo_id": "826", "name": "United Kingdom", "high": 2, "medium": 2, "low": 1, "severity_index": 0.68},
+                {"id": "DEU", "topo_id": "276", "name": "Germany", "high": 1, "medium": 1, "low": 2, "severity_index": 0.42},
+                {"id": "BRA", "topo_id": "076", "name": "Brazil", "high": 2, "medium": 1, "low": 0, "severity_index": 0.78},
+                {"id": "AUS", "topo_id": "036", "name": "Australia", "high": 1, "medium": 2, "low": 1, "severity_index": 0.52},
+                {"id": "IND", "topo_id": "356", "name": "India", "high": 2, "medium": 2, "low": 1, "severity_index": 0.65},
+                {"id": "MEX", "topo_id": "484", "name": "Mexico", "high": 1, "medium": 1, "low": 1, "severity_index": 0.48},
+            ],
+            "heatmap_local": {
+                "USA": [
+                    {"id": "TX", "name": "Texas", "high": 2, "medium": 1, "low": 0, "severity_index": 0.85},
+                    {"id": "CA", "name": "California", "high": 1, "medium": 1, "low": 1, "severity_index": 0.58},
+                    {"id": "IL", "name": "Illinois", "high": 1, "medium": 1, "low": 0, "severity_index": 0.72},
+                    {"id": "AZ", "name": "Arizona", "high": 0, "medium": 1, "low": 1, "severity_index": 0.45},
+                    {"id": "CO", "name": "Colorado", "high": 0, "medium": 0, "low": 1, "severity_index": 0.28},
+                ],
+                "CAN": [{"id": "ON", "name": "Ontario", "high": 0, "medium": 1, "low": 1, "severity_index": 0.4}, {"id": "AB", "name": "Alberta", "high": 1, "medium": 0, "low": 0, "severity_index": 0.9}],
+                "GBR": [{"id": "ENG", "name": "England", "high": 1, "medium": 1, "low": 0, "severity_index": 0.7}, {"id": "SCT", "name": "Scotland", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}],
+            },
+            "insight_summary": "Hydraulics account for the highest share of failures. Main Boom Cylinder and hose assemblies are the most common failure points. Consider scheduling preventive hose replacement.",
+        },
+        "Engine": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 1},
+                {"month": "Sep", "count": 2},
+                {"month": "Oct", "count": 2},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 1},
+                {"month": "Jan", "count": 1},
+            ],
+            "item_breakdown": [
+                {"item": "Oil Level / Leaks", "pass": 10, "fail": 3, "monitor": 2},
+                {"item": "Coolant Level", "pass": 12, "fail": 1, "monitor": 2},
+                {"item": "Air Filter", "pass": 8, "fail": 2, "monitor": 5},
+                {"item": "Belts & Hoses", "pass": 11, "fail": 2, "monitor": 2},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 2}, {"severity": "MEDIUM", "count": 3}, {"severity": "LOW", "count": 3}],
+            "top_recommended_actions": [
+                {"action": "Replace oil filter / fix leak", "count": 4},
+                {"action": "Top off coolant", "count": 2},
+                {"action": "Replace air filter", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-003", "equipment": "CAT 320 Excavator", "date": "2025-01-12", "result": "FAIL", "summary": "Engine oil leak at filter housing"},
+                {"id": "insp-006", "equipment": "CAT D6 Dozer", "date": "2025-01-08", "result": "MONITOR", "summary": "Coolant level at minimum"},
+            ],
+            "heatmap_global": [
+                {"id": "USA", "topo_id": "840", "name": "United States", "high": 2, "medium": 2, "low": 3, "severity_index": 0.48},
+                {"id": "CAN", "topo_id": "124", "name": "Canada", "high": 1, "medium": 1, "low": 1, "severity_index": 0.5},
+                {"id": "MEX", "topo_id": "484", "name": "Mexico", "high": 1, "medium": 1, "low": 0, "severity_index": 0.65},
+            ],
+            "heatmap_local": {"USA": [{"id": "TX", "name": "Texas", "high": 1, "medium": 0, "low": 1, "severity_index": 0.55}, {"id": "CA", "name": "California", "high": 0, "medium": 1, "low": 1, "severity_index": 0.35}]},
+            "insight_summary": "Engine-related issues are mostly oil and coolant. Oil leaks and filter condition are the top drivers. Regular fluid checks can reduce failures.",
+        },
+        "Electrical": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 2},
+                {"month": "Sep", "count": 1},
+                {"month": "Oct", "count": 1},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 0},
+                {"month": "Jan", "count": 1},
+            ],
+            "item_breakdown": [
+                {"item": "Battery & Connections", "pass": 9, "fail": 2, "monitor": 4},
+                {"item": "Wiring & Harness", "pass": 10, "fail": 2, "monitor": 3},
+                {"item": "Sensors", "pass": 11, "fail": 1, "monitor": 3},
+                {"item": "Lighting", "pass": 13, "fail": 1, "monitor": 1},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 1}, {"severity": "MEDIUM", "count": 2}, {"severity": "LOW", "count": 3}],
+            "top_recommended_actions": [
+                {"action": "Clean battery terminals / load test", "count": 3},
+                {"action": "Repair or replace damaged wiring", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-004", "equipment": "CAT D6 Dozer", "date": "2025-01-11", "result": "FAIL", "summary": "Battery voltage low; alternator output marginal"},
+            ],
+            "heatmap_global": [
+                {"id": "USA", "topo_id": "840", "name": "United States", "high": 1, "medium": 1, "low": 2, "severity_index": 0.45},
+                {"id": "DEU", "topo_id": "276", "name": "Germany", "high": 0, "medium": 1, "low": 1, "severity_index": 0.38},
+            ],
+            "heatmap_local": {"USA": [{"id": "TX", "name": "Texas", "high": 1, "medium": 0, "low": 0, "severity_index": 0.85}]},
+            "insight_summary": "Electrical failures are less frequent but often battery or wiring related. Load testing batteries during inspections can catch issues early.",
+        },
+        "Undercarriage": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 1},
+                {"month": "Sep", "count": 1},
+                {"month": "Oct", "count": 1},
+                {"month": "Nov", "count": 1},
+                {"month": "Dec", "count": 0},
+                {"month": "Jan", "count": 1},
+            ],
+            "item_breakdown": [
+                {"item": "Track Tension", "pass": 8, "fail": 1, "monitor": 6},
+                {"item": "Rollers & Idlers", "pass": 10, "fail": 2, "monitor": 3},
+                {"item": "Sprockets", "pass": 11, "fail": 1, "monitor": 3},
+                {"item": "Track Pads", "pass": 9, "fail": 1, "monitor": 5},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 1}, {"severity": "MEDIUM", "count": 2}, {"severity": "LOW", "count": 2}],
+            "top_recommended_actions": [
+                {"action": "Adjust track tension", "count": 3},
+                {"action": "Replace worn rollers", "count": 2},
+            ],
+            "recent_inspections": [
+                {"id": "insp-007", "equipment": "CAT D6 Dozer", "date": "2025-01-07", "result": "MONITOR", "summary": "Track tension at upper limit; re-check in 2 weeks"},
+            ],
+            "heatmap_global": [{"id": "USA", "topo_id": "840", "name": "United States", "high": 0, "medium": 1, "low": 2, "severity_index": 0.35}, {"id": "CAN", "topo_id": "124", "name": "Canada", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}],
+            "heatmap_local": {"USA": [{"id": "TX", "name": "Texas", "high": 0, "medium": 1, "low": 1, "severity_index": 0.4}]},
+            "insight_summary": "Undercarriage issues are often tension and wear. Regular tension checks and pad wear monitoring help avoid unexpected downtime.",
+        },
+        "Attachments": {
+            "failures_over_time": [
+                {"month": "Aug", "count": 0},
+                {"month": "Sep", "count": 1},
+                {"month": "Oct", "count": 1},
+                {"month": "Nov", "count": 0},
+                {"month": "Dec", "count": 1},
+                {"month": "Jan", "count": 0},
+            ],
+            "item_breakdown": [
+                {"item": "Bucket / Blade Condition", "pass": 12, "fail": 1, "monitor": 2},
+                {"item": "Pins & Bushings", "pass": 10, "fail": 2, "monitor": 3},
+                {"item": "Cutting Edges", "pass": 11, "fail": 1, "monitor": 3},
+            ],
+            "severity_breakdown": [{"severity": "HIGH", "count": 0}, {"severity": "MEDIUM", "count": 1}, {"severity": "LOW", "count": 2}],
+            "top_recommended_actions": [
+                {"action": "Replace worn pins and bushings", "count": 2},
+                {"action": "Replace cutting edges", "count": 1},
+            ],
+            "recent_inspections": [
+                {"id": "insp-009", "equipment": "CAT 320 Excavator", "date": "2025-01-04", "result": "MONITOR", "summary": "Bucket teeth wear; schedule replacement"},
+            ],
+            "heatmap_global": [{"id": "USA", "topo_id": "840", "name": "United States", "high": 0, "medium": 1, "low": 2, "severity_index": 0.32}],
+            "heatmap_local": {"USA": [{"id": "AZ", "name": "Arizona", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}]},
+            "insight_summary": "Attachment failures are the lowest. Focus on pins, bushings, and cutting edges to extend attachment life.",
+        },
+    }
+    data = base.get(category)
+    if not data:
+        # Default template for unknown category
+        data = {
+            "failures_over_time": MOCK_ANALYTICS["inspections_over_time"],
+            "item_breakdown": [{"item": "Item A", "pass": 5, "fail": 2, "monitor": 1}, {"item": "Item B", "pass": 6, "fail": 1, "monitor": 0}],
+            "severity_breakdown": [{"severity": "HIGH", "count": 0}, {"severity": "MEDIUM", "count": 1}, {"severity": "LOW", "count": 1}],
+            "top_recommended_actions": [{"action": "Review and repair", "count": 1}],
+            "recent_inspections": [],
+            "heatmap_global": [{"id": "USA", "topo_id": "840", "name": "United States", "high": 0, "medium": 1, "low": 0, "severity_index": 0.5}],
+            "heatmap_local": {},
+            "insight_summary": f"Inspection data for {category}.",
+        }
+    return data
+
 MOCK_INSPECTION_DETAIL = {
     "id": "insp-002",
     "equipment_model": "CAT D6 Dozer",
@@ -351,7 +595,7 @@ MOCK_INSPECTION_DETAIL = {
     "status": "FAIL",
     "date": "2025-01-14",
     "inspector": "Sriram N.",
-    "summary": "This safety inspection identified a critical hydraulic leak in the main boom cylinder that requires immediate attention. The leak was detected during visual inspection and confirmed with pressure testing. All other systems are operating within normal parameters, but the equipment should be taken out of service until repairs are completed.",
+    "summary": "This safety inspection of the CAT D6 Dozer (serial CAT0D6X67890) at Highway Construction LLC, Austin, TX, identified a critical hydraulic leak in the main boom cylinder that requires immediate attention. The leak was detected during visual inspection and confirmed with pressure testing; the high-pressure line is compromised and poses both equipment failure and safety risk. A secondary finding—reduced operator visibility due to a cracked side mirror—was also documented and should be addressed for compliance. All other systems (stick cylinder, engine oil and coolant, backup camera, undercarriage) are operating within normal parameters. The equipment should be taken out of service until the hydraulic line is replaced and a follow-up inspection confirms repairs. Recommended parts have been matched for the hydraulic hose assembly and side mirror.",
     "safety_findings": [
         "Critical: Hydraulic leak detected in main boom cylinder - High pressure line compromised",
         "Warning: Operator visibility reduced due to cracked side mirror"
@@ -388,9 +632,186 @@ MOCK_INSPECTION_DETAIL = {
         {"id": "m4", "type": "video", "url": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800", "thumbnail": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200", "timestamp": "10:30:00", "caption": "Equipment walkthrough video"}
     ],
     "similar_inspections": [
-        {"id": "insp-010", "title": "Similar Hydraulic Issues Cluster", "summary": "3 other D6 units in the fleet have shown similar hydraulic line wear in the past 90 days", "count": 3},
-        {"id": "insp-011", "title": "Mirror Damage Pattern", "summary": "5 units reported side mirror damage this quarter, possible site condition issue", "count": 5}
+        {
+            "id": "insp-010",
+            "equipment_model": "CAT D6T Dozer",
+            "serial_number": "CAT0D6T44123",
+            "customer": "Highway Construction LLC",
+            "location": "San Antonio, TX",
+            "inspection_date": "2025-01-08",
+            "status": "PASS",
+            "issue_title": "Hydraulic leak – main boom cylinder high-pressure line",
+            "issue_description": "During a safety inspection, a critical hydraulic leak was identified at the main boom cylinder. The high-pressure line showed visible wear and a small crack at the fitting, with fluid seepage. Pressure testing confirmed a drop under load. The issue was consistent with similar failures seen on other D6 units in the fleet.",
+            "executive_summary": "This safety inspection of the CAT D6T Dozer (serial CAT0D6T44123) at Highway Construction LLC, San Antonio, identified a critical hydraulic leak at the main boom cylinder. The high-pressure line was replaced using part 5I-4461 (Hydraulic Hose Assembly), the system was refilled and bled, and a follow-up inspection confirmed no further leaks. The operator was trained on daily visual checks of hydraulic fittings. The unit was returned to service and passed re-inspection on 2025-01-12.",
+            "how_they_fixed_it": [
+                "Depressurized the hydraulic system and safely supported the boom; removed the damaged high-pressure line (5I-4461) and inspected the port for scoring.",
+                "Installed new Hydraulic Hose Assembly (P/N 5I-4461) with new O-ring seal kit (1U-1857); torqued fittings to spec and refilled hydraulic reservoir to correct level.",
+                "Bled air from the boom circuit per manual, cycled boom several times, and rechecked fluid level; ran at operating pressure for 15 minutes and confirmed no leaks.",
+                "Scheduled and completed follow-up inspection 4 days later; all hydraulic checks passed. Documented repair in maintenance log and updated PM schedule."
+            ],
+            "parts_used": ["5I-4461 Hydraulic Hose Assembly", "1U-1857 O-Ring Seal Kit"],
+            "resolution_notes": "Total downtime ~2 days. Same repair has held for 3+ months on two other fleet D6s."
+        },
+        {
+            "id": "insp-011",
+            "equipment_model": "CAT D6 Dozer",
+            "serial_number": "CAT0D6X55100",
+            "customer": "Desert Earthworks",
+            "location": "Phoenix, AZ",
+            "inspection_date": "2025-01-05",
+            "status": "PASS",
+            "issue_title": "Cracked driver-side mirror assembly",
+            "issue_description": "The driver-side mirror housing was cracked and the glass was loose, reducing rear and side visibility. Damage was consistent with impact (e.g. gate or obstacle). This is a common finding across multiple units at the same site.",
+            "executive_summary": "This daily walkaround of the CAT D6 Dozer (serial CAT0D6X55100) at Desert Earthworks, Phoenix, flagged a cracked side mirror as a safety compliance issue. Maintenance replaced the mirror assembly (P/N 9W-3214) the same day. Post-repair inspection confirmed secure mounting and correct adjustment. The site supervisor was briefed on the pattern of mirror damage; additional signage and spotter protocols were added in tight areas to reduce recurrence.",
+            "how_they_fixed_it": [
+                "Ordered Side Mirror Assembly (P/N 9W-3214) from local dealer; received and installed within same shift.",
+                "Removed damaged mirror and wiring; installed new assembly, aligned for optimal field of view, and tightened per spec.",
+                "Verified no loose wiring or vibration; documented replacement and cleared unit for operation. Briefed operator on reporting any new contact damage."
+            ],
+            "parts_used": ["9W-3214 Side Mirror Assembly"],
+            "resolution_notes": "Same-day repair. Five other units at this site had mirror damage this quarter; site conditions were addressed to reduce repeat issues."
+        },
+        {
+            "id": "insp-012",
+            "equipment_model": "CAT D6N Dozer",
+            "serial_number": "CAT0D6N77882",
+            "customer": "Midwest Grading Co",
+            "location": "Kansas City, MO",
+            "inspection_date": "2024-12-20",
+            "status": "PASS",
+            "issue_title": "Hydraulic leak and track tension monitoring",
+            "issue_description": "Inspection found a minor hydraulic leak at the stick cylinder seal and track tension at the low end of the acceptable range. Both were addressed before they could develop into major failures.",
+            "executive_summary": "This TA1 inspection of the CAT D6N (serial CAT0D6N77882) at Midwest Grading Co identified a minor hydraulic leak at the stick cylinder and track tension that required adjustment. The cylinder seal was replaced and the track was tensioned to spec. A follow-up inspection two weeks later showed no further leaks and track within range. The unit has operated without recurrence for 6 weeks.",
+            "how_they_fixed_it": [
+                "Stick cylinder: Drained and disassembled rod end; replaced seal kit, reassembled, refilled and bled; pressure-tested with no leaks.",
+                "Track tension: Adjusted per manual to correct sag; rechecked after 30 min of operation and documented measurement.",
+                "Scheduled re-inspection at 2 weeks; both items passed. Added hydraulic and undercarriage to next PM checklist."
+            ],
+            "parts_used": ["Stick cylinder seal kit (OEM)", "Track adjustment per manual"],
+            "resolution_notes": "Combined repair and adjustment in one downtime window (~4 hours). No repeat issues to date."
+        }
     ]
+}
+
+# Per-inspection detail so Summary, Checklist, Media, Parts differ for each starter inspection
+MOCK_DETAIL_BY_INSPECTION = {
+    "insp-001": {
+        "summary": "CAT 320 Excavator passed all daily walkaround checks. Swing bearing and boom hydraulics are within spec. No fluid leaks or abnormal wear observed. Cab and safety equipment verified.",
+        "findings": [
+            {"id": "f1", "timestamp": "09:15:22", "severity": "LOW", "title": "Dust on cab filter", "recommendation": "Replace cab air filter at next PM", "confidence": 0.88, "category": "Cab"},
+            {"id": "f2", "timestamp": "09:18:00", "severity": "LOW", "title": "Boom pins within spec", "recommendation": "No action", "confidence": 0.99, "category": "Structural"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Hydraulics", "item": "Boom cylinder seals", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.96},
+            {"id": "c2", "category": "Hydraulics", "item": "Swing motor", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.94},
+            {"id": "c3", "category": "Engine", "item": "Oil level", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.99},
+            {"id": "c4", "category": "Safety", "item": "Seat belt and ROPS", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 1.0},
+            {"id": "c5", "category": "Cab", "item": "Cab air filter", "result": "MONITOR", "severity": "LOW", "evidence": None, "recommended_action": "Replace at next service", "confidence": 0.88}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "324-2341", "part_name": "Cab air filter", "fitment_certainty": 0.99, "compatible_models": ["320", "320L", "320M"]},
+            {"id": "p2", "part_number": "4W-9562", "part_name": "Hydraulic filter element", "fitment_certainty": 0.97, "compatible_models": ["320", "323", "326"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800", "thumbnail": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=200", "timestamp": "09:12:00", "caption": "320 excavator boom and stick"},
+            {"id": "m2", "type": "photo", "url": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800", "thumbnail": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200", "timestamp": "09:16:00", "caption": "Cab interior and controls"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-012", "title": "Same unit last week", "summary": "This 320 had a clean pass on 2025-01-08", "count": 1},
+            {"id": "insp-013", "title": "BuildCo fleet 320s", "summary": "4 other 320s at BuildCo passed this month", "count": 4}
+        ]
+    },
+    "insp-002": {
+        "summary": MOCK_INSPECTION_DETAIL["summary"],
+        "findings": MOCK_INSPECTION_DETAIL["findings"],
+        "checklist": MOCK_INSPECTION_DETAIL["checklist"],
+        "parts_matches": MOCK_INSPECTION_DETAIL["parts_matches"],
+        "media": MOCK_INSPECTION_DETAIL["media"],
+        "similar_inspections": [
+            {"id": "insp-010", "title": "Similar Hydraulic Issues Cluster", "summary": "3 other D6 units in the fleet have shown similar hydraulic line wear in the past 90 days", "count": 3},
+            {"id": "insp-011", "title": "Mirror Damage Pattern", "summary": "5 units reported side mirror damage this quarter, possible site condition issue", "count": 5}
+        ]
+    },
+    "insp-003": {
+        "summary": "CAT 966 Wheel Loader TA1 assessment found bucket cutting edge and teeth within wear limits but trending. Recommend scheduling teeth replacement in 3–4 weeks. Lift arms and tilt cylinders passed. Tire condition good.",
+        "findings": [
+            {"id": "f1", "timestamp": "11:02:11", "severity": "MEDIUM", "title": "Bucket teeth wear", "recommendation": "Order teeth set; replace within 30 days", "confidence": 0.92, "category": "Attachments"},
+            {"id": "f2", "timestamp": "11:05:44", "severity": "LOW", "title": "Lift arm pins", "recommendation": "Grease and re-check at next walkaround", "confidence": 0.91, "category": "Linkage"},
+            {"id": "f3", "timestamp": "11:10:02", "severity": "LOW", "title": "Radiator fins", "recommendation": "Blow out debris at next wash", "confidence": 0.89, "category": "Cooling"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Attachments", "item": "Bucket cutting edge", "result": "MONITOR", "severity": "MEDIUM", "evidence": "photo_001.jpg", "recommended_action": "Replace teeth in 30 days", "confidence": 0.92},
+            {"id": "c2", "category": "Attachments", "item": "Bucket cylinders", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.95},
+            {"id": "c3", "category": "Engine", "item": "Coolant and oil", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.98},
+            {"id": "c4", "category": "Tires", "item": "Front tire condition", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.97},
+            {"id": "c5", "category": "Tires", "item": "Rear tire condition", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.96},
+            {"id": "c6", "category": "Cooling", "item": "Radiator", "result": "MONITOR", "severity": "LOW", "evidence": None, "recommended_action": "Clean fins", "confidence": 0.89}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "8C-9021", "part_name": "Bucket tooth assembly (set of 6)", "fitment_certainty": 0.98, "compatible_models": ["966", "966M", "972M"]},
+            {"id": "p2", "part_number": "5P-4562", "part_name": "Cutting edge segment", "fitment_certainty": 0.95, "compatible_models": ["966", "968"]},
+            {"id": "p3", "part_number": "3T-2341", "part_name": "Lift cylinder seal kit", "fitment_certainty": 0.93, "compatible_models": ["966", "966M"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=800", "thumbnail": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=200", "timestamp": "11:00:00", "caption": "966 bucket and teeth"},
+            {"id": "m2", "type": "photo", "url": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800", "thumbnail": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200", "timestamp": "11:08:00", "caption": "Lift arms and linkage"},
+            {"id": "m3", "type": "video", "url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800", "thumbnail": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=200", "timestamp": "11:15:00", "caption": "TA1 full walkthrough"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-020", "title": "Quarry 966 fleet", "summary": "2 other 966s at Quarry Masters had bucket work this quarter", "count": 2},
+            {"id": "insp-021", "title": "Loader bucket wear", "summary": "Similar teeth wear on 968 and 972 in region", "count": 4}
+        ]
+    },
+    "insp-004": {
+        "summary": "CAT 745 Articulated Truck daily walkaround complete. All systems nominal. Tire pressures and tread depth within spec. Dump body hinges and cylinders checked. No leaks or damage. Ready for haul road.",
+        "findings": [
+            {"id": "f1", "timestamp": "08:45:00", "severity": "LOW", "title": "All systems OK", "recommendation": "No action", "confidence": 0.99, "category": "General"},
+            {"id": "f2", "timestamp": "08:47:30", "severity": "LOW", "title": "Tire pressure nominal", "recommendation": "Continue weekly check", "confidence": 0.98, "category": "Tires"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Tires", "item": "Front axle tires", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.98},
+            {"id": "c2", "category": "Tires", "item": "Rear axle tires", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.97},
+            {"id": "c3", "category": "Body", "item": "Dump body hinges", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.96},
+            {"id": "c4", "category": "Hydraulics", "item": "Hoist cylinders", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.95},
+            {"id": "c5", "category": "Engine", "item": "Oil and coolant", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.99}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "745-TIRE-01", "part_name": "Front tire 26.5R25", "fitment_certainty": 0.99, "compatible_models": ["745", "740"]},
+            {"id": "p2", "part_number": "2F-3341", "part_name": "Hoist cylinder seal kit", "fitment_certainty": 0.94, "compatible_models": ["745", "740", "735"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800", "thumbnail": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200", "timestamp": "08:42:00", "caption": "745 front and tires"},
+            {"id": "m2", "type": "photo", "url": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=800", "thumbnail": "https://images.unsplash.com/photo-1566041510639-8d95a2490bfb?w=200", "timestamp": "08:50:00", "caption": "Dump body and hoist"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-030", "title": "Mountain Mining 745s", "summary": "3 other 745s at this site passed this week", "count": 3},
+            {"id": "insp-031", "title": "Articulated truck fleet", "summary": "740/745 fleet at Denver in good standing", "count": 6}
+        ]
+    },
+    "insp-005": {
+        "summary": "CAT 336 Excavator safety inspection in progress. Initial walkaround started; hydraulics and cab checks pending. No critical issues observed so far on boom and undercarriage.",
+        "findings": [
+            {"id": "f1", "timestamp": "14:00:00", "severity": "LOW", "title": "Inspection started", "recommendation": "Complete remaining checklist items", "confidence": 0.9, "category": "General"}
+        ],
+        "checklist": [
+            {"id": "c1", "category": "Structural", "item": "Boom and stick", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.92},
+            {"id": "c2", "category": "Undercarriage", "item": "Track and rollers", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.88},
+            {"id": "c3", "category": "Hydraulics", "item": "Boom cylinders", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.85},
+            {"id": "c4", "category": "Engine", "item": "Oil level", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.99},
+            {"id": "c5", "category": "Safety", "item": "Cab and ROPS", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.95},
+            {"id": "c6", "category": "Electrical", "item": "Lights and horn", "result": "PASS", "severity": "LOW", "evidence": None, "recommended_action": None, "confidence": 0.94}
+        ],
+        "parts_matches": [
+            {"id": "p1", "part_number": "336-7890", "part_name": "Track roller (single)", "fitment_certainty": 0.96, "compatible_models": ["336", "336F", "340"]},
+            {"id": "p2", "part_number": "7K-1122", "part_name": "Boom pin bushing kit", "fitment_certainty": 0.91, "compatible_models": ["336", "336F"]}
+        ],
+        "media": [
+            {"id": "m1", "type": "photo", "url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800", "thumbnail": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=200", "timestamp": "14:00:00", "caption": "336 boom and cab — inspection in progress"}
+        ],
+        "similar_inspections": [
+            {"id": "insp-040", "title": "Urban Dev 336 fleet", "summary": "2 other 336s at Urban Development scheduled this week", "count": 2}
+        ]
+    },
 }
 
 # --------------------- Routes ---------------------
@@ -416,53 +837,61 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     return status_checks
 
+# Store for dynamically created inspections (must be before get_inspections so list can include them)
+CREATED_INSPECTIONS = {}
+
 # Inspections endpoints
 @api_router.get("/inspections")
 async def get_inspections(status: Optional[str] = None, inspection_type: Optional[str] = None, search: Optional[str] = None):
     """Get list of inspections with optional filters"""
     results = MOCK_INSPECTIONS.copy()
-    
+    # Include dynamically created inspections so they appear on the dashboard
+    list_keys = ("id", "equipment_model", "serial_number", "customer", "location", "inspection_type", "status", "date", "inspector", "summary", "safety_findings", "action_items")
+    for insp in CREATED_INSPECTIONS.values():
+        if not isinstance(insp, dict):
+            continue
+        item = {k: insp.get(k) for k in list_keys if k in insp}
+        if item.get("id") and item.get("equipment_model"):
+            results.append(item)
+
     if status and status != "all":
-        results = [i for i in results if i["status"].lower() == status.lower()]
-    
+        results = [i for i in results if i.get("status") and i["status"].lower() == status.lower()]
+
     if inspection_type and inspection_type != "all":
-        results = [i for i in results if i["inspection_type"].lower() == inspection_type.lower()]
-    
+        results = [i for i in results if i.get("inspection_type") and i["inspection_type"].lower() == inspection_type.lower()]
+
     if search:
         search_lower = search.lower()
-        results = [i for i in results if 
-                   search_lower in i["equipment_model"].lower() or 
-                   search_lower in i["serial_number"].lower() or
-                   search_lower in i["customer"].lower() or
-                   search_lower in i["location"].lower()]
-    
-    return results
+        results = [i for i in results if
+                   search_lower in (i.get("equipment_model") or "").lower() or
+                   search_lower in (i.get("serial_number") or "").lower() or
+                   search_lower in (i.get("customer") or "").lower() or
+                   search_lower in (i.get("location") or "").lower()]
 
-# Store for dynamically created inspections
-CREATED_INSPECTIONS = {}
+    return results
 
 @api_router.get("/inspections/{inspection_id}")
 async def get_inspection(inspection_id: str):
-    """Get single inspection detail"""
-    # Return detailed mock for insp-002, otherwise return basic mock
-    if inspection_id == "insp-002":
-        return MOCK_INSPECTION_DETAIL
-    
+    """Get single inspection detail. Summary, checklist, media, and parts vary per starter inspection."""
     # Check if it's a dynamically created inspection
     if inspection_id in CREATED_INSPECTIONS:
         return CREATED_INSPECTIONS[inspection_id]
-    
+
+    # Use per-inspection detail for known mock IDs so Summary, Checklist, Media, Parts differ
     for insp in MOCK_INSPECTIONS:
         if insp["id"] == inspection_id:
-            return {**insp, **{
-                "findings": MOCK_INSPECTION_DETAIL["findings"],
-                "checklist": MOCK_INSPECTION_DETAIL["checklist"],
-                "parts_matches": MOCK_INSPECTION_DETAIL["parts_matches"],
-                "media": MOCK_INSPECTION_DETAIL["media"],
-                "similar_inspections": MOCK_INSPECTION_DETAIL["similar_inspections"]
-            }}
-    
-    # For any unknown ID, return a mock completed inspection
+            detail = MOCK_DETAIL_BY_INSPECTION.get(inspection_id, MOCK_INSPECTION_DETAIL)
+            return {
+                **insp,
+                "summary": detail.get("summary", insp.get("summary", "")),
+                "findings": detail.get("findings", []),
+                "checklist": detail.get("checklist", []),
+                "parts_matches": detail.get("parts_matches", []),
+                "media": detail.get("media", []),
+                "similar_inspections": detail.get("similar_inspections", [])
+            }
+
+    # For any unknown ID, return a generic completed inspection
     return {
         "id": inspection_id,
         "equipment_model": "CAT D6 Dozer",
@@ -473,7 +902,7 @@ async def get_inspection(inspection_id: str):
         "status": "Submitted",
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "inspector": "Sriram N.",
-        "summary": "This inspection has been completed successfully. The AI assistant analyzed the equipment and identified several items for review. All critical safety checks passed, with minor maintenance recommendations noted below.",
+        "summary": "This inspection has been completed successfully. The AI assistant analyzed the equipment during the live inspection and documented findings across hydraulics, engine, safety equipment, and structural components. All critical safety checks have been reviewed: no critical safety issues were detected. Minor maintenance recommendations and any inspector-override checklist results are reflected in the Checklist and Action Items sections below. Review the captured findings and schedule follow-up or preventive maintenance as needed.",
         "safety_findings": ["No critical safety issues detected"],
         "action_items": [
             {"priority": 1, "action": "Review captured findings", "risk": "Low", "why": "Ensure all items documented"},
@@ -502,8 +931,14 @@ async def create_inspection(inspection: InspectionCreate):
         "inspector": "Sriram N.",
         "summary": "",
         "safety_findings": [],
-        "action_items": []
+        "action_items": [],
+        "findings": MOCK_INSPECTION_DETAIL.get("findings", []),
+        "checklist": MOCK_INSPECTION_DETAIL.get("checklist", []),
+        "parts_matches": MOCK_INSPECTION_DETAIL.get("parts_matches", []),
+        "media": [],
+        "similar_inspections": MOCK_INSPECTION_DETAIL.get("similar_inspections", []),
     }
+    CREATED_INSPECTIONS[new_id] = new_inspection
     return new_inspection
 
 @api_router.put("/inspections/{inspection_id}/checklist/{item_id}")
@@ -514,6 +949,27 @@ async def update_checklist_item(inspection_id: str, item_id: str, result: str):
 @api_router.post("/inspections/{inspection_id}/finish")
 async def finish_inspection(inspection_id: str):
     """Finish inspection and generate report"""
+    if inspection_id in CREATED_INSPECTIONS:
+        insp = CREATED_INSPECTIONS[inspection_id]
+        insp["status"] = "Submitted"
+        equipment = insp.get("equipment_model", "Equipment")
+        serial = insp.get("serial_number", "")
+        customer = insp.get("customer", "Customer")
+        location = insp.get("location", "")
+        insp_type = insp.get("inspection_type", "Inspection")
+        checklist = insp.get("checklist") or []
+        findings = insp.get("findings") or []
+        action_count = len(insp.get("action_items") or [])
+        fail_count = sum(1 for c in checklist if isinstance(c, dict) and c.get("result") == "FAIL")
+        pass_count = sum(1 for c in checklist if isinstance(c, dict) and c.get("result") == "PASS")
+        insp["summary"] = (
+            insp.get("summary")
+            or f"This {insp_type} of the {equipment}" + (f" (serial {serial})" if serial else "")
+            + f" at {customer}, {location}, has been completed successfully. "
+            + f"The AI assistant analyzed the equipment and documented {len(findings)} finding(s) and {len(checklist)} checklist item(s): {pass_count} passed, {fail_count} failed, with the remainder marked for monitoring. "
+            + (f"There are {action_count} prioritized action item(s) below; address critical and high-risk items before returning the unit to service. " if action_count else "No critical action items were identified; review the checklist and schedule preventive maintenance as needed. ")
+            + "Full details are available in the Summary, Checklist, Media, and Parts tabs."
+        )
     return {
         "success": True,
         "inspection_id": inspection_id,
@@ -526,6 +982,368 @@ async def finish_inspection(inspection_id: str):
 async def get_analytics():
     """Get analytics data for dashboard"""
     return MOCK_ANALYTICS
+
+
+@api_router.get("/analytics/category/{category}")
+async def get_analytics_by_category(category: str):
+    """Get detailed analytics for a specific category (e.g. Hydraulics, Engine)."""
+    name_in_url = (category or "").strip()
+    category_key = next(
+        (c["category"] for c in MOCK_ANALYTICS["failed_parts"] if c["category"].lower() == name_in_url.lower()),
+        name_in_url or "Other",
+    )
+    detail = _category_analytics(category_key)
+    part_row = next((p for p in MOCK_ANALYTICS["failed_parts"] if p["category"].lower() == category_key.lower()), None)
+    return {
+        "category": category_key,
+        "total_failures": part_row["count"] if part_row else 0,
+        "percentage_of_all": part_row["percentage"] if part_row else 0,
+        **detail,
+    }
+
+
+# ---------- Export: PDF (single report) and CSV (all + analytics) ----------
+def _build_inspection_pdf(detail: dict) -> bytes:
+    """Build a PDF report for one inspection using reportlab."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(name="Title", parent=styles["Heading1"], fontSize=16, spaceAfter=12)
+    h2_style = ParagraphStyle(name="H2", parent=styles["Heading2"], fontSize=12, spaceAfter=6, spaceBefore=12)
+
+    story = []
+    story.append(Paragraph("CAT Inspect – Inspection Report", title_style))
+    story.append(Spacer(1, 0.2 * inch))
+
+    # Meta (ensure no None for reportlab)
+    def _s(v):
+        return str(v).strip() if v is not None else ""
+
+    meta = [
+        ["Equipment", _s(detail.get("equipment_model"))],
+        ["Serial", _s(detail.get("serial_number"))],
+        ["Customer", _s(detail.get("customer"))],
+        ["Location", _s(detail.get("location"))],
+        ["Date", _s(detail.get("date"))],
+        ["Type", _s(detail.get("inspection_type"))],
+        ["Status", _s(detail.get("status"))],
+        ["Inspector", _s(detail.get("inspector"))],
+    ]
+    t = Table(meta, colWidths=[1.2 * inch, 4.3 * inch])
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (0, -1), 9),
+        ("FONTSIZE", (1, 0), (1, -1), 9),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.grey),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.25 * inch))
+
+    summary = (detail.get("summary") or "").strip()
+    if summary:
+        story.append(Paragraph("Summary", h2_style))
+        story.append(Paragraph(summary.replace("\n", "<br/>"), styles["Normal"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+    safety = detail.get("safety_findings") or []
+    if safety:
+        story.append(Paragraph("Safety findings", h2_style))
+        for s in safety:
+            story.append(Paragraph(f"• {_s(s)}", styles["Normal"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+    actions = detail.get("action_items") or []
+    if actions:
+        story.append(Paragraph("Action items", h2_style))
+        rows = [["Priority", "Action", "Risk", "Reason"]]
+        for a in actions:
+            rows.append([
+                str(a.get("priority") if a.get("priority") is not None else ""),
+                _s(a.get("action")),
+                _s(a.get("risk")),
+                _s(a.get("why")),
+            ])
+        t2 = Table(rows, colWidths=[0.6 * inch, 2.2 * inch, 1.4 * inch, 1.3 * inch])
+        t2.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F7B500")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("ALIGN", (0, 0), (0, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(t2)
+        story.append(Spacer(1, 0.2 * inch))
+
+    checklist = detail.get("checklist") or []
+    if checklist:
+        story.append(Paragraph("Checklist", h2_style))
+        rows = [["Category", "Item", "Result", "Severity", "Recommended action"]]
+        for c in checklist:
+            rows.append([
+                _s(c.get("category")),
+                _s(c.get("item")),
+                _s(c.get("result")),
+                _s(c.get("severity")),
+                _s(c.get("recommended_action")),
+            ])
+        t3 = Table(rows, colWidths=[1.1 * inch, 1.8 * inch, 0.7 * inch, 0.7 * inch, 1.2 * inch])
+        t3.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E2E8F0")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t3)
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+@api_router.get("/export/inspection/{inspection_id}/pdf")
+async def export_inspection_pdf(inspection_id: str):
+    """Export a single inspection report as PDF."""
+    detail = await get_inspection(inspection_id)
+    pdf_bytes = _build_inspection_pdf(detail)
+    filename = f"inspection-report-{inspection_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=\"{filename}\""},
+    )
+
+
+@api_router.get("/export/all")
+async def export_all_csv():
+    """Export all inspections and analytics as a single CSV for Google Sheets. Includes sections for charts."""
+    inspections = await get_inspections()
+    analytics = MOCK_ANALYTICS
+    buf = io.StringIO()
+    w = csv.writer(buf)
+
+    w.writerow(["CAT Inspect – Full Export (CSV)"])
+    w.writerow([datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")])
+    w.writerow(["Import into Google Sheets, then use Insert > Chart on any data block below to create graphs."])
+    w.writerow([])
+
+    w.writerow(["INSPECTIONS (detail)"])
+    w.writerow([
+        "ID", "Equipment", "Serial", "Customer", "Location", "Date", "Type", "Status", "Inspector",
+        "Safety findings count", "Action items count", "Summary"
+    ])
+    for i in inspections:
+        safety = i.get("safety_findings") or []
+        actions = i.get("action_items") or []
+        w.writerow([
+            i.get("id", ""),
+            i.get("equipment_model", ""),
+            i.get("serial_number", ""),
+            i.get("customer", ""),
+            i.get("location", ""),
+            i.get("date", ""),
+            i.get("inspection_type", ""),
+            i.get("status", ""),
+            i.get("inspector", ""),
+            len(safety),
+            len(actions),
+            ((i.get("summary") or "")[:300]),
+        ])
+    w.writerow([])
+
+    w.writerow(["ANALYTICS – Failed parts by category (Bar chart: Category = X, Count = Y)"])
+    w.writerow(["Category", "Count", "Percentage"])
+    for p in (analytics.get("failed_parts") or []):
+        w.writerow([p.get("category", ""), p.get("count", ""), p.get("percentage", "")])
+    w.writerow([])
+
+    w.writerow(["ANALYTICS – Inspections over time (Line chart: Month = X, Count = Y)"])
+    w.writerow(["Month", "Count"])
+    for r in (analytics.get("inspections_over_time") or []):
+        w.writerow([r.get("month", ""), r.get("count", "")])
+    w.writerow([])
+
+    w.writerow(["ANALYTICS – Pass / Fail / Monitor (Pie chart: Outcome = labels, Count = values)"])
+    w.writerow(["Outcome", "Count"])
+    pfm = analytics.get("pass_fail_monitor") or {}
+    for label, key in [("Pass", "pass"), ("Fail", "fail"), ("Monitor", "monitor")]:
+        w.writerow([label, pfm.get(key, 0)])
+    w.writerow([])
+
+    for cat in ["Hydraulics", "Engine", "Electrical"]:
+        cad = _category_analytics(cat)
+        w.writerow([f"ANALYTICS – {cat} failures over time (Line chart)"])
+        w.writerow(["Month", "Count"])
+        for r in (cad.get("failures_over_time") or []):
+            w.writerow([r.get("month", ""), r.get("count", "")])
+        w.writerow([])
+
+    w.writerow(["Chart tips: Select the header row + data rows for a section, then Insert > Chart. Choose Bar, Line, or Pie."])
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": "attachment; filename=\"cat-inspect-export-all.csv\"",
+            "Content-Type": "text/csv; charset=utf-8",
+        },
+    )
+
+
+def _build_export_all_xlsx() -> bytes:
+    """Build an Excel workbook with inspection data and embedded charts (bar, line, pie)."""
+    from openpyxl import Workbook
+    from openpyxl.chart import BarChart, LineChart, PieChart, Reference
+
+    wb = Workbook()
+    inspections = list(MOCK_INSPECTIONS)
+    analytics = MOCK_ANALYTICS
+    failed_parts = analytics.get("failed_parts") or []
+    over_time = analytics.get("inspections_over_time") or []
+    pfm = analytics.get("pass_fail_monitor") or {}
+
+    # ---- Sheet 1: Inspections ----
+    ws_insp = wb.active
+    ws_insp.title = "Inspections"
+    ws_insp.append([
+        "ID", "Equipment", "Serial", "Customer", "Location", "Date", "Type", "Status", "Inspector",
+        "Safety #", "Actions #", "Summary"
+    ])
+    for i in inspections:
+        safety = i.get("safety_findings") or []
+        actions = i.get("action_items") or []
+        ws_insp.append([
+            i.get("id", ""),
+            i.get("equipment_model", ""),
+            i.get("serial_number", ""),
+            i.get("customer", ""),
+            i.get("location", ""),
+            i.get("date", ""),
+            i.get("inspection_type", ""),
+            i.get("status", ""),
+            i.get("inspector", ""),
+            len(safety),
+            len(actions),
+            (i.get("summary") or "")[:200],
+        ])
+
+    n_fp = len(failed_parts)
+    n_ot = len(over_time)
+
+    # ---- Sheet 2: Failed Parts + Bar Chart ----
+    ws_fp = wb.create_sheet("Failed Parts", 1)
+    ws_fp.append(["Category", "Count", "Percentage"])
+    for p in failed_parts:
+        ws_fp.append([p.get("category", ""), p.get("count", 0), p.get("percentage", 0)])
+    if n_fp >= 1:
+        try:
+            chart_bar = BarChart()
+            chart_bar.type = "col"
+            chart_bar.title = "Failures by Category"
+            chart_bar.y_axis.title = "Count"
+            chart_bar.x_axis.title = "Category"
+            data = Reference(ws_fp, min_col=2, min_row=1, max_col=2, max_row=n_fp + 1)
+            cats = Reference(ws_fp, min_col=1, min_row=2, max_row=n_fp + 1)
+            chart_bar.add_data(data, titles_from_data=True)
+            chart_bar.set_categories(cats)
+            chart_bar.width = 14
+            chart_bar.height = 8
+            ws_fp.add_chart(chart_bar, "E2")
+        except Exception:
+            pass
+
+    # ---- Sheet 3: Inspections Over Time + Line Chart ----
+    ws_ot = wb.create_sheet("Over Time", 2)
+    ws_ot.append(["Month", "Count"])
+    for r in over_time:
+        ws_ot.append([r.get("month", ""), r.get("count", 0)])
+    if n_ot >= 1:
+        try:
+            chart_line = LineChart()
+            chart_line.title = "Inspections Over Time"
+            chart_line.y_axis.title = "Count"
+            chart_line.x_axis.title = "Month"
+            data = Reference(ws_ot, min_col=2, min_row=1, max_col=2, max_row=n_ot + 1)
+            cats = Reference(ws_ot, min_col=1, min_row=2, max_row=n_ot + 1)
+            chart_line.add_data(data, titles_from_data=True)
+            chart_line.set_categories(cats)
+            chart_line.width = 14
+            chart_line.height = 8
+            ws_ot.add_chart(chart_line, "E2")
+        except Exception:
+            pass
+
+    # ---- Sheet 4: Outcomes + Pie Chart ----
+    ws_oc = wb.create_sheet("Outcomes", 3)
+    ws_oc.append(["Outcome", "Count"])
+    for label, key in [("Pass", "pass"), ("Fail", "fail"), ("Monitor", "monitor")]:
+        ws_oc.append([label, pfm.get(key, 0)])
+    try:
+        chart_pie = PieChart()
+        chart_pie.title = "Inspection Outcomes"
+        data = Reference(ws_oc, min_col=2, min_row=1, max_col=2, max_row=4)
+        cats = Reference(ws_oc, min_col=1, min_row=2, max_row=4)
+        chart_pie.add_data(data, titles_from_data=True)
+        chart_pie.set_categories(cats)
+        chart_pie.width = 10
+        chart_pie.height = 8
+        ws_oc.add_chart(chart_pie, "E2")
+    except Exception:
+        pass
+
+    # ---- Sheet 5: Hydraulics Over Time ----
+    cad = _category_analytics("Hydraulics")
+    fot = cad.get("failures_over_time") or []
+    ws_hy = wb.create_sheet("Hydraulics Trend", 4)
+    ws_hy.append(["Month", "Failures"])
+    for r in fot:
+        ws_hy.append([r.get("month", ""), r.get("count", 0)])
+    if len(fot) >= 1:
+        try:
+            chart_hy = LineChart()
+            chart_hy.title = "Hydraulics Failures Over Time"
+            chart_hy.y_axis.title = "Failures"
+            n_hy = len(fot) + 1
+            data = Reference(ws_hy, min_col=2, min_row=1, max_col=2, max_row=n_hy)
+            cats = Reference(ws_hy, min_col=1, min_row=2, max_row=n_hy)
+            chart_hy.add_data(data, titles_from_data=True)
+            chart_hy.set_categories(cats)
+            chart_hy.width = 12
+            chart_hy.height = 7
+            ws_hy.add_chart(chart_hy, "E2")
+        except Exception:
+            pass
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+@api_router.get("/export/all/excel")
+async def export_all_excel():
+    """Export all inspections and analytics as Excel (.xlsx) with embedded charts (bar, line, pie)."""
+    try:
+        xlsx_bytes = _build_export_all_xlsx()
+    except Exception as e:
+        logging.exception("Excel export failed: %s", e)
+        raise HTTPException(status_code=500, detail="Excel export failed. Try CSV export instead.")
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=\"cat-inspect-export-all.xlsx\"",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
+    )
+
 
 # Document upload for chatbot context (PDF)
 @api_router.post("/documents/upload")
@@ -633,10 +1451,10 @@ Use plain text only (no Markdown: no ** for bold, no # headers). Be concise, pro
             max_tokens=max_tokens
         )
         
-        response_text = response.choices[0].message.content
-        
-        # Extract chart JSON if present (simple bar charts for UI)
-        chart_data = _extract_chart_json(response_text)
+        raw_content = response.choices[0].message.content or ""
+        chart_data = _extract_chart_json(raw_content)
+        response_text = _remove_chart_json_from_text(raw_content)
+        response_text = _strip_markdown(response_text)
         return ChatResponse(response=response_text, chart_data=chart_data)
         
     except Exception as e:

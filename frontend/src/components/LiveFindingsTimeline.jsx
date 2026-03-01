@@ -80,7 +80,7 @@ export const LiveFindingsTimeline = ({ findings = [], isRecording }) => {
 
           {findings.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/90">
-              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+              <div className="icon-glass w-12 h-12 rounded-full mb-3">
                 <AlertTriangle className="w-6 h-6 opacity-50" />
               </div>
               <p className="text-[13px] font-medium">No findings yet</p>

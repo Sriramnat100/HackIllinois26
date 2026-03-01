@@ -18,13 +18,13 @@ import {
   Zap,
   FileUp,
   FileText,
-  X
+  X,
+  Bookmark
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import axios from "axios";
-
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL } from "@/config";
 
 const suggestedPrompts = [
   { text: "Summarize my last inspection", icon: Sparkles },
@@ -39,7 +39,7 @@ const documentPrompts = [
   { text: "What are the main risks and action items?", icon: Zap },
 ];
 
-export const ChatDock = () => {
+export const ChatDock = ({ onSaveChart }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState([
     {
@@ -156,8 +156,8 @@ export const ChatDock = () => {
           <CollapsibleTrigger asChild>
             <div className="chat-header-enterprise cursor-pointer">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#F7B500] flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-slate-900" />
+                <div className="icon-glass icon-glass-lg">
+                  <Bot className="w-5 h-5 text-slate-600 dark:text-white" />
                 </div>
                 <div>
                   <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white">
@@ -203,7 +203,7 @@ export const ChatDock = () => {
                     )}
                   >
                     {message.role === "assistant" && (
-                      <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+                      <div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0 mt-1">
                         <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                       </div>
                     )}
@@ -219,9 +219,23 @@ export const ChatDock = () => {
                       <div className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</div>
                       {message.chart_data && (
                         <div className="mt-3 bg-white dark:bg-slate-900 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[11px] font-semibold text-slate-600 dark:text-white mb-2 uppercase tracking-wide">
-                            {message.chart_data.title}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-[11px] font-semibold text-slate-600 dark:text-white uppercase tracking-wide">
+                              {message.chart_data.title}
+                            </p>
+                            {typeof onSaveChart === "function" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-[11px] text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                onClick={() => onSaveChart({ title: message.chart_data.title, data: message.chart_data.data })}
+                              >
+                                <Bookmark className="w-3.5 h-3.5 mr-1" />
+                                Save chart
+                              </Button>
+                            )}
+                          </div>
                           <div className="h-28">
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={message.chart_data.data}>
@@ -255,8 +269,8 @@ export const ChatDock = () => {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0">
-                      <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
+<div className="icon-glass icon-glass-sm rounded-full mr-2 flex-shrink-0">
+                    <Bot className="w-4 h-4 text-slate-500 dark:text-white/80" />
                     </div>
                     <div className="chat-bubble-assistant">
                       <div className="flex gap-1.5 py-1">

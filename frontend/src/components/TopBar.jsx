@@ -54,8 +54,8 @@ export const TopBar = () => {
           onClick={() => navigate("/app/dashboard")}
           data-testid="logo-link"
         >
-          <div className="w-10 h-10 bg-[#F7B500] rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-            <HardHat className="w-5 h-5 text-slate-900" />
+          <div className="icon-glass icon-glass-xl group-hover:shadow-md transition-shadow">
+            <HardHat className="w-5 h-5 text-slate-600 dark:text-white" />
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-[17px] text-slate-900 dark:text-white leading-tight tracking-tight">
@@ -91,7 +91,7 @@ export const TopBar = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="w-9 h-9 text-slate-500 dark:text-white hover:text-slate-900 dark:hover:text-white"
+          className="icon-glass w-9 h-9 rounded-lg text-slate-600 dark:text-white hover:opacity-90 transition-opacity p-0"
           onClick={toggleTheme}
           data-testid="theme-toggle"
         >
@@ -110,8 +110,8 @@ export const TopBar = () => {
               className="flex items-center gap-2 h-10 px-2 hover:bg-slate-100 dark:hover:bg-slate-800"
               data-testid="profile-dropdown-trigger"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#F7B500] to-[#E5A800] flex items-center justify-center shadow-sm">
-                <span className="text-[13px] font-bold text-slate-900">SN</span>
+              <div className="icon-glass icon-glass-md rounded-full">
+                <span className="text-[13px] font-bold text-slate-600 dark:text-white">SN</span>
               </div>
               <div className="hidden sm:flex flex-col items-start">
                 <span className="text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">Sriram N.</span>
