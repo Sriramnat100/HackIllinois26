@@ -80,7 +80,7 @@ export function AnalyticsSection() {
             <div className="flex items-center gap-3">
               <div className="h-3 w-3 rounded-full bg-primary" aria-hidden="true" />
               <span className="text-sm font-semibold text-foreground">
-                Inspect AI Dashboard
+                Catvision Dashboard
               </span>
             </div>
             <div className="flex items-center gap-2">

@@ -69,7 +69,7 @@ export const TopBar = () => {
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-[17px] text-slate-900 dark:text-white leading-tight tracking-tight">
-              Cat Inspect
+              Catvision
             </span>
             <span className="text-[10px] text-[#F7B500] font-bold tracking-[0.2em] uppercase">
               AI Platform

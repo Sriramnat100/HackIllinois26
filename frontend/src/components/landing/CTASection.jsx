@@ -73,7 +73,7 @@ export function CTASection() {
           </h2>
 
           <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-            Join the construction companies already using Caterpillar Inspect AI
+            Join the construction companies already using Catvision
             to cut inspection time by 80% and eliminate missed defects.
           </p>
 

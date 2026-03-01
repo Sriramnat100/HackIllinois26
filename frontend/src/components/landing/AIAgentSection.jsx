@@ -73,7 +73,7 @@ export function AIAgentSection() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Inspect AI Agent
+                    Catvision AI Agent
                   </p>
                   <div className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />

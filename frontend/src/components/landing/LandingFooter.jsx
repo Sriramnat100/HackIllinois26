@@ -16,28 +16,18 @@ export function LandingFooter() {
               <path d="M16 8L24 24H8L16 8Z" fill="#000000" />
               <path d="M16 14L20 22H12L16 14Z" fill="#FFCD11" />
             </svg>
-            <span className="text-sm font-bold text-foreground tracking-tight font-serif">
-              CATERPILLAR
-            </span>
+            <div className="flex flex-col leading-none">
+              <span className="text-sm font-bold text-foreground tracking-tight font-serif">
+                CATERPILLAR
+              </span>
+              <span className="text-xs font-medium tracking-widest text-primary">
+                VISION AI
+              </span>
+            </div>
           </div>
 
-          <nav className="flex items-center gap-6" aria-label="Footer navigation">
-            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Features
-            </a>
-            <a href="#analytics" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Analytics
-            </a>
-            <a href="#agent" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              AI Agent
-            </a>
-            <a href="#stats" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Results
-            </a>
-          </nav>
-
           <p className="text-xs text-muted-foreground">
-            Caterpillar Inspect AI. All rights reserved.
+            Catvision. All rights reserved.
           </p>
         </div>
       </div>

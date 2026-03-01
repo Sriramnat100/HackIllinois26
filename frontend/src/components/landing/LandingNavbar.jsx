@@ -67,25 +67,10 @@ export function LandingNavbar() {
                   CATERPILLAR
                 </span>
                 <span className="text-xs font-medium tracking-widest text-primary">
-                  INSPECT AI
+                  VISION AI
                 </span>
               </div>
             </div>
-
-            <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
-              <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Features
-              </a>
-              <a href="#analytics" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Analytics
-              </a>
-              <a href="#agent" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                AI Agent
-              </a>
-              <a href="#stats" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Results
-              </a>
-            </nav>
 
             <Button
               className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-sm px-6"

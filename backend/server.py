@@ -251,6 +251,7 @@ class ChatResponse(BaseModel):
 # Session-scoped uploaded documents for chatbot context (session_id -> {filename, text})
 SESSION_DOCUMENTS: dict[str, dict[str, Any]] = {}
 MAX_DOCUMENT_CHARS = 50_000  # truncate to stay within context window
+MAX_DOC_CHAT_CONTEXT_CHARS = int(os.environ.get("MAX_DOC_CHAT_CONTEXT_CHARS", "12000"))
 
 def extract_text_from_pdf(content: bytes) -> str:
     """Extract text from PDF bytes. Returns empty string on failure."""
@@ -270,6 +271,21 @@ def extract_text_from_pdf(content: bytes) -> str:
     except Exception as e:
         logger.warning(f"PDF extraction failed: {e}")
         return ""
+
+
+def _document_context_for_chat(text: str) -> str:
+    """
+    Bound document context used in chat prompts to avoid large token bursts.
+    Keeps the beginning (often summary/introduction) and appends a truncation note.
+    """
+    if not text:
+        return ""
+    if len(text) <= MAX_DOC_CHAT_CONTEXT_CHARS:
+        return text
+    return (
+        text[:MAX_DOC_CHAT_CONTEXT_CHARS]
+        + "\n\n[Document context truncated for chat. Ask about a specific section for deeper analysis.]"
+    )
 
 class AnalyticsData(BaseModel):
     failed_parts: List[dict]
@@ -1412,7 +1428,7 @@ Main risk: One short sentence here.
 
 --- BEGIN UPLOADED DOCUMENT ---
 """
-            system_message += doc["text"]
+            system_message += _document_context_for_chat(doc["text"])
             system_message += "\n--- END UPLOADED DOCUMENT ---"
             max_tokens = 600
         else:
@@ -1469,9 +1485,16 @@ Use plain text only (no Markdown: no ** for bold, no # headers). Be concise, pro
             err_msg = str(e).replace("OpenAI:", "").strip()
             if "invalid_api_key" in err_msg.lower() or "authentication" in err_msg.lower():
                 return ChatResponse(response="I couldn't analyze your document: the API key looks invalid. Please check OPENAI_API_KEY in backend/.env and restart the backend.")
+            if "rate limit" in err_msg.lower() or "429" in err_msg or "tokens per min" in err_msg.lower():
+                return ChatResponse(
+                    response=(
+                        "I couldn't analyze your document right now because the model is rate-limited (429 tokens/min). "
+                        "Please wait about a minute and try again, or ask for a shorter summary/specific section."
+                    )
+                )
             if "context_length" in err_msg.lower() or "maximum context" in err_msg.lower():
                 return ChatResponse(response="Your document is too long for one analysis. Try uploading a shorter PDF or ask about a specific section.")
-            return ChatResponse(response=f"I couldn't analyze your document. Error: {err_msg[:200]}. Please check your API key and try again.")
+            return ChatResponse(response=f"I couldn't analyze your document. Error: {err_msg[:200]}.")
 
         # Fallback response (no document or generic question)
         fallback_responses = {

@@ -87,7 +87,7 @@ export function FeaturesSection() {
               Always watching. Always learning.
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-4">
-              Caterpillar Inspect AI combines wearable technology with enterprise-grade machine learning to transform how your team conducts inspections.
+              Catvision combines wearable technology with enterprise-grade machine learning to transform how your team conducts inspections.
             </p>
 
             <div className="grid gap-4">

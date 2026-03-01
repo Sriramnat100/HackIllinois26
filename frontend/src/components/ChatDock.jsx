@@ -44,7 +44,7 @@ export const ChatDock = ({ onSaveChart }) => {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hi Sriram! I'm your Cat Inspect AI assistant. I can help you analyze inspections, identify failure patterns, and generate insights. What would you like to know?",
+      content: "Hi Sriram! I'm your Catvision AI assistant. I can help you analyze inspections, identify failure patterns, and generate insights. What would you like to know?",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
