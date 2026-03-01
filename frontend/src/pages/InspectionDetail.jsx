@@ -32,7 +32,7 @@ import {
 import axios from "axios";
 import { toast } from "sonner";
 
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL } from "@/lib/api";
 
 export default function InspectionDetail() {
   const { id } = useParams();
@@ -113,7 +113,7 @@ export default function InspectionDetail() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-background">
         <div className="spinner-cat" />
       </div>
     );
@@ -121,7 +121,7 @@ export default function InspectionDetail() {
 
   if (!inspection) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-slate-500 dark:text-slate-400 mb-4 text-[14px]">Inspection not found</p>
           <Button onClick={() => navigate("/app/dashboard")} className="btn-primary-cat">
@@ -133,15 +133,15 @@ export default function InspectionDetail() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-slate-950 page-enter" data-testid="inspection-detail-page">
+    <div className="min-h-[calc(100vh-4rem)] bg-background page-enter" data-testid="inspection-detail-page">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-5 sticky top-14 z-30">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-4">
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 px-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white -ml-2"
+              className="h-9 px-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white -ml-1"
               onClick={() => navigate("/app/dashboard")}
               data-testid="back-btn"
             >
@@ -150,7 +150,7 @@ export default function InspectionDetail() {
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-[#F7B500]/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-[12px] bg-[#F7B500]/10 flex items-center justify-center">
                   <Truck className="w-5 h-5 text-[#F7B500]" />
                 </div>
                 <div>
@@ -206,7 +206,7 @@ export default function InspectionDetail() {
       {/* Content */}
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 h-auto rounded-xl">
+          <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 h-auto rounded-[12px]">
             <TabsTrigger 
               value="summary" 
               className="tab-enterprise flex items-center gap-1.5 data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-800 rounded-lg" 
@@ -263,8 +263,8 @@ export default function InspectionDetail() {
 
             {/* Safety Critical Findings */}
             {inspection.safety_findings?.length > 0 && (
-              <div className="card-enterprise border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20">
-                <div className="card-header-enterprise border-red-100 dark:border-red-900/50">
+              <div className="card-enterprise border-red-200 dark:border-red-900 bg-red-500/5 dark:bg-red-500/8">
+                <div className="card-header-enterprise border-red-500/10 dark:border-red-500/10">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
                       <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
@@ -298,7 +298,7 @@ export default function InspectionDetail() {
                   {inspection.action_items.map((item, index) => (
                     <div
                       key={index}
-                      className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl"
+                      className="flex items-start gap-4 p-4 bg-slate-50/60 dark:bg-slate-800/40 rounded-[12px]"
                     >
                       <div
                         className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-[14px] ${
@@ -409,7 +409,7 @@ export default function InspectionDetail() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#F7B500]"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                               onClick={() => setEditingItem(item.id)}
                               data-testid={`edit-checklist-${item.id}`}
                             >

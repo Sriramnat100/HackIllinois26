@@ -10,7 +10,7 @@ import InspectionDetail from "@/pages/InspectionDetail";
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background transition-colors">
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/app/dashboard" replace />} />

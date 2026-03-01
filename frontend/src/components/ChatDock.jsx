@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import axios from "axios";
 
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL } from "@/lib/api";
 
 const suggestedPrompts = [
   { text: "Summarize my last inspection", icon: Sparkles },
@@ -96,7 +96,7 @@ export const ChatDock = () => {
           <CollapsibleTrigger asChild>
             <div className="chat-header-enterprise cursor-pointer">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#F7B500] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-[10px] bg-[#F7B500] flex items-center justify-center">
                   <Bot className="w-5 h-5 text-slate-900" />
                 </div>
                 <div>
@@ -135,7 +135,7 @@ export const ChatDock = () => {
                     )}
                   >
                     {message.role === "assistant" && (
-                      <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+                      <div className="w-7 h-7 rounded-[10px] bg-slate-100/80 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
                         <Bot className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                       </div>
                     )}
@@ -187,7 +187,7 @@ export const ChatDock = () => {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0">
+                    <div className="w-7 h-7 rounded-[10px] bg-slate-100/80 dark:bg-slate-800 flex items-center justify-center mr-2 flex-shrink-0">
                       <Bot className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                     </div>
                     <div className="chat-bubble-assistant">
@@ -221,7 +221,7 @@ export const ChatDock = () => {
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/30">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -240,7 +240,7 @@ export const ChatDock = () => {
                 <Button
                   type="submit"
                   size="icon"
-                  className="h-10 w-10 bg-[#F7B500] hover:bg-[#E5A800] text-slate-900"
+                  className="h-10 w-10 rounded-[10px] bg-[#F7B500] hover:bg-[#E5A800] text-slate-900"
                   disabled={isLoading || !inputValue.trim()}
                   data-testid="chat-send-btn"
                 >

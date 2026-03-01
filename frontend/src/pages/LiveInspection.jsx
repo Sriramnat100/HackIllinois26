@@ -21,18 +21,36 @@ import {
   PhoneOff,
   Eye,
   EyeOff,
+  Scan,
 } from "lucide-react";
+import { useObjectDetection, buildDetectionContext, BASE_INSTRUCTIONS } from "@/hooks/useObjectDetection";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import axios from "axios";
 
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL } from "@/lib/api";
+
+const REPORT_STAGES = [
+  "Analyzing footage",
+  "Classifying findings",
+  "Matching parts",
+  "Generating summary",
+  "Finalizing report",
+];
+
+const INSIGHT_DEDUPE_MS = 25000;
+const CANDIDATE_STALE_MS = 12000;
+const HIGH_IMMEDIATE_CONFIDENCE = 65;
+const MEDIUM_MIN_CONFIDENCE = 78;
+const NON_PASS_MIN_CONFIDENCE = 75;
+const REQUIRED_CONFIRMATIONS = 2;
 
 export default function LiveInspection() {
   const { id } = useParams();
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const detectionCanvasRef = useRef(null);
   const streamRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const dataChannelRef = useRef(null);
@@ -51,7 +69,47 @@ export default function LiveInspection() {
   const [aiStatus, setAiStatus] = useState("idle"); // idle, listening, thinking, speaking, analyzing
   const [visionEnabled, setVisionEnabled] = useState(false); // Auto vision analysis
   const [lastVisionResult, setLastVisionResult] = useState("");
+  const [detectionEnabled, setDetectionEnabled] = useState(false); // Object detection + boxes
+  const [reportStage, setReportStage] = useState(0);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [inspectorNotes, setInspectorNotes] = useState([]);
+  const [inspectionInsights, setInspectionInsights] = useState([]);
   const visionIntervalRef = useRef(null);
+  const contextUpdateIntervalRef = useRef(null);
+  const detectionsRef = useRef([]);
+  const lastVisionResultRef = useRef("");
+  const visionItemIdRef = useRef(null);
+  const initialInsightCapturedRef = useRef(false);
+  const pendingCandidatesRef = useRef(new Map());
+  const lastLoggedByFingerprintRef = useRef(new Map());
+
+  // Object detection (MediaPipe) - draws boxes, provides labels for AI context
+  const { detections } = useObjectDetection(
+    videoRef,
+    detectionCanvasRef,
+    detectionEnabled,
+    0.5
+  );
+
+  // Keep refs in sync for context injection
+  detectionsRef.current = detections;
+  lastVisionResultRef.current = lastVisionResult;
+
+  // Capture frame from video at high quality for vision analysis
+  const captureFrame = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) return null;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    return dataUrl.split(',')[1];
+  }, []);
 
   // Update time
   useEffect(() => {
@@ -93,10 +151,12 @@ export default function LiveInspection() {
   const getEphemeralToken = async () => {
     try {
       const response = await axios.post(`${API_URL}/ai/realtime/session`);
+      console.log("Ephemeral token response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Failed to get ephemeral token:", error);
-      throw error;
+      const errorMsg = error.response?.data?.detail || error.message || "Unknown error getting session";
+      throw new Error(`Session error: ${errorMsg}`);
     }
   };
 
@@ -131,6 +191,20 @@ export default function LiveInspection() {
         audioEl.srcObject = e.streams[0];
       };
 
+      pc.onconnectionstatechange = () => {
+        console.log("WebRTC connection state:", pc.connectionState);
+        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+          console.warn("WebRTC connection lost");
+          toast.warning("AI connection interrupted. Try reconnecting.");
+          setIsConnected(false);
+          setAiStatus("idle");
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        console.log("ICE connection state:", pc.iceConnectionState);
+      };
+
       // Add local audio track (microphone)
       if (streamRef.current) {
         const audioTrack = streamRef.current.getAudioTracks()[0];
@@ -148,33 +222,24 @@ export default function LiveInspection() {
         console.log("Data channel opened");
         setAiStatus("listening");
         
-        // Configure session for equipment inspection
+        // Configure session for equipment inspection (context injected periodically)
         const sessionConfig = {
           type: "session.update",
           session: {
-            instructions: `You are an expert Caterpillar equipment inspector AI assistant conducting a live inspection. 
-            
-Your job is to:
-- Listen to the inspector's observations and questions
-- Provide real-time guidance on what to look for
-- Alert them to potential safety hazards
-- Help identify parts and components
-- Suggest maintenance recommendations
-
-Be concise and direct in your responses. Speak naturally as if you're alongside the inspector.
-When you identify issues, categorize them as HIGH (safety critical), MEDIUM (needs attention), or LOW (minor) severity.
-
-Start by greeting the inspector and asking what equipment they're inspecting today.`,
-            voice: "alloy",
-            input_audio_transcription: {
-              model: "whisper-1"
+            type: "realtime",
+            instructions: BASE_INSTRUCTIONS,
+            audio: {
+              input: {
+                transcription: { model: "whisper-1" },
+                turn_detection: {
+                  type: "server_vad",
+                  threshold: 0.5,
+                  prefix_padding_ms: 300,
+                  silence_duration_ms: 500
+                }
+              },
+              output: { voice: "alloy" },
             },
-            turn_detection: {
-              type: "server_vad",
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 500
-            }
           }
         };
         dc.send(JSON.stringify(sessionConfig));
@@ -198,34 +263,46 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
       await pc.setLocalDescription(offer);
 
       // Connect directly to OpenAI Realtime API using ephemeral key
-      const model = sessionData.model || "gpt-4o-realtime-preview-2024-12-17";
-      const openaiResponse = await fetch(`https://api.openai.com/v1/realtime?model=${model}`, {
-        method: "POST",
-        body: offer.sdp,
-        headers: {
-          Authorization: `Bearer ${ephemeralKey}`,
-          "Content-Type": "application/sdp",
-        },
-      });
+      const sdpResponse = await axios.post(
+        "https://api.openai.com/v1/realtime/calls",
+        offer.sdp,
+        {
+          headers: {
+            Authorization: `Bearer ${ephemeralKey}`,
+            "Content-Type": "application/sdp",
+          },
+          responseType: "text",
+          transformResponse: [(data) => data],
+        }
+      );
 
-      if (!openaiResponse.ok) {
-        const errorText = await openaiResponse.text();
-        throw new Error(`OpenAI connection failed: ${openaiResponse.status} - ${errorText}`);
-      }
-
-      const answerSdp = await openaiResponse.text();
-      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+      await pc.setRemoteDescription({ type: "answer", sdp: sdpResponse.data });
       
       setIsConnected(true);
       setIsConnecting(false);
       toast.success("Connected to AI Inspector");
       console.log("WebRTC connection established");
 
+      // Auto-enable vision so the AI can "see" immediately
+      setTimeout(() => startVisionAnalysis(), 1500);
+
     } catch (error) {
       console.error("Connection error:", error);
       setIsConnecting(false);
       setIsConnected(false);
-      toast.error("Failed to connect to AI: " + (error.response?.data?.detail || error.message));
+      
+      // Clean up any partial connection
+      if (dataChannelRef.current) {
+        try { dataChannelRef.current.close(); } catch (e) {}
+        dataChannelRef.current = null;
+      }
+      if (peerConnectionRef.current) {
+        try { peerConnectionRef.current.close(); } catch (e) {}
+        peerConnectionRef.current = null;
+      }
+      
+      const errorMsg = error.response?.data?.detail || error.message || "Unknown connection error";
+      toast.error("Failed to connect to AI: " + errorMsg);
     }
   };
 
@@ -304,7 +381,7 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
     output.forEach((item) => {
       if (item.type === "message" && item.content) {
         item.content.forEach((content) => {
-          if (content.type === "text" || content.type === "output_text") {
+          if (content.type === "output_text" || content.type === "text") {
             processTextForFindings(content.text);
           }
         });
@@ -392,6 +469,141 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
       const result = response.data;
       setLastVisionResult(result.spoken_response || result.analysis);
 
+      // Build an insight card entry for right-rail history
+      const findingsList = Array.isArray(result.findings) ? result.findings : [];
+      const normalizedBackendSeverity = String(result.severity || result.overall_severity || "").toUpperCase();
+      let severityRecommendation =
+        normalizedBackendSeverity === "HIGH" || normalizedBackendSeverity === "MEDIUM" || normalizedBackendSeverity === "LOW"
+          ? normalizedBackendSeverity
+          : null;
+
+      if (!severityRecommendation) {
+        severityRecommendation = findingsList.some((f) => (f.severity || "").toUpperCase() === "HIGH") || result.should_alert
+          ? "HIGH"
+          : findingsList.some((f) => (f.severity || "").toUpperCase() === "MEDIUM")
+          ? "MEDIUM"
+          : "LOW";
+      }
+
+      const backendDecision = String(result.recommended_decision || "").toUpperCase();
+      const recommendedDecision =
+        backendDecision === "PASS" || backendDecision === "FAIL" || backendDecision === "FURTHER INSPECTION"
+          ? backendDecision
+          : severityRecommendation === "HIGH"
+          ? "FAIL"
+          : severityRecommendation === "MEDIUM"
+          ? "FURTHER INSPECTION"
+          : "PASS";
+
+      const insightCategory =
+        findingsList[0]?.issue ||
+        findingsList[0]?.category ||
+        (result.analysis ? "Visual inspection" : "Scene check");
+
+      const rawConfidence = Number(findingsList[0]?.confidence);
+      const confidencePercent = Number.isFinite(rawConfidence)
+        ? Math.round(Math.max(0, Math.min(1, rawConfidence)) * 100)
+        : 89;
+
+      const normalizedCategory = String(insightCategory || "visual-check")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const fingerprint = `${normalizedCategory}|${severityRecommendation}|${recommendedDecision}`;
+
+      const signal = {
+        id: `insight-${Date.now()}`,
+        fingerprint,
+        timestamp: new Date().toLocaleTimeString(),
+        loggedAtMs: Date.now(),
+        imageUrl: `data:image/jpeg;base64,${imageBase64}`,
+        category: insightCategory,
+        summary: (result.analysis || result.spoken_response || "No notable issues detected").slice(0, 180),
+        aiRecommendation:
+          findingsList[0]?.recommendation ||
+          (recommendedDecision === "PASS"
+            ? "Likely low/no impact. Inspector confirms final decision."
+            : recommendedDecision === "FURTHER INSPECTION"
+            ? "Further inspection recommended. Inspector confirms final decision."
+            : "Likely fail condition. Inspector confirms final decision."),
+        confidence: confidencePercent,
+        severityRecommendation,
+        recommendedDecision,
+        inspectorDecision: recommendedDecision,
+        confirmed: false,
+        confirmations: 1,
+      };
+
+      const shouldAddInsight = () => {
+        const now = Date.now();
+        const pending = pendingCandidatesRef.current;
+        const logged = lastLoggedByFingerprintRef.current;
+
+        // Cleanup stale candidate entries
+        for (const [key, value] of pending.entries()) {
+          if (now - value.lastSeenMs > CANDIDATE_STALE_MS) {
+            pending.delete(key);
+          }
+        }
+
+        // Do not spam duplicate cards in short time windows
+        const lastLoggedMs = logged.get(signal.fingerprint);
+        if (lastLoggedMs && now - lastLoggedMs < INSIGHT_DEDUPE_MS) {
+          return { add: false, reason: "dedupe" };
+        }
+
+        // Immediate path for high-confidence HIGH severity
+        if (
+          signal.severityRecommendation === "HIGH" &&
+          signal.confidence >= HIGH_IMMEDIATE_CONFIDENCE
+        ) {
+          logged.set(signal.fingerprint, now);
+          return { add: true, confirmations: 1 };
+        }
+
+        // Candidate path for medium or non-pass outcomes
+        const candidateEligible =
+          (signal.severityRecommendation === "MEDIUM" &&
+            signal.confidence >= MEDIUM_MIN_CONFIDENCE) ||
+          (signal.recommendedDecision !== "PASS" &&
+            signal.confidence >= NON_PASS_MIN_CONFIDENCE);
+
+        if (!candidateEligible) {
+          return { add: false, reason: "below-threshold" };
+        }
+
+        const existing = pending.get(signal.fingerprint);
+        if (!existing || now - existing.lastSeenMs > CANDIDATE_STALE_MS) {
+          pending.set(signal.fingerprint, {
+            count: 1,
+            lastSeenMs: now,
+          });
+          return { add: false, reason: "need-confirmation" };
+        }
+
+        const nextCount = existing.count + 1;
+        pending.set(signal.fingerprint, {
+          count: nextCount,
+          lastSeenMs: now,
+        });
+
+        if (nextCount < REQUIRED_CONFIRMATIONS) {
+          return { add: false, reason: "need-confirmation" };
+        }
+
+        pending.delete(signal.fingerprint);
+        logged.set(signal.fingerprint, now);
+        return { add: true, confirmations: nextCount };
+      };
+
+      const gate = shouldAddInsight();
+      if (gate.add) {
+        setInspectionInsights((prev) => [
+          { ...signal, confirmations: gate.confirmations || 1 },
+          ...prev,
+        ].slice(0, 40));
+      }
+
       // Add findings if detected
       if (result.findings && result.findings.length > 0) {
         const newFindings = result.findings.map((f, idx) => ({
@@ -427,35 +639,30 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
     }
   };
 
-  // Speak vision result - inject into realtime conversation or use TTS
+  const setInsightDecision = (insightId, decision) => {
+    setInspectionInsights((prev) =>
+      prev.map((item) =>
+        item.id === insightId
+          ? { ...item, inspectorDecision: decision, confirmed: false }
+          : item
+      )
+    );
+  };
+
+  const confirmInsightDecision = (insightId) => {
+    setInspectionInsights((prev) =>
+      prev.map((item) =>
+        item.id === insightId
+          ? { ...item, confirmed: true, confirmedAt: new Date().toLocaleTimeString() }
+          : item
+      )
+    );
+    toast.success("Inspector decision confirmed");
+  };
+
+  // Speak vision result via TTS (only used for manual camera capture)
   const speakVisionResult = async (text) => {
-    // If connected to realtime, send as assistant message to be spoken
-    if (isConnected && dataChannelRef.current?.readyState === "open") {
-      // Create a response with the vision analysis
-      const visionMessage = {
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: text
-            }
-          ]
-        }
-      };
-      dataChannelRef.current.send(JSON.stringify(visionMessage));
-      
-      // Trigger audio response
-      dataChannelRef.current.send(JSON.stringify({ 
-        type: "response.create",
-        response: {
-          modalities: ["audio"],
-          instructions: `Say exactly this: "${text}"`
-        }
-      }));
-    } else {
+    if (!isConnected) {
       // Fall back to TTS API
       try {
         const ttsResponse = await axios.post(`${API_URL}/ai/tts`, {
@@ -478,21 +685,22 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
     if (visionIntervalRef.current) return;
     
     setVisionEnabled(true);
-    toast.success("Auto vision analysis started (every 5 seconds)");
+    setDetectionEnabled(true);
+    toast.success("Vision + object detection enabled");
     
-    // Analyze immediately
+    // Analyze immediately (don't auto-speak; results are injected as context for the voice AI)
     const imageBase64 = captureFrame();
     if (imageBase64) {
-      analyzeFrameWithVision(imageBase64, true);
+      analyzeFrameWithVision(imageBase64, false);
     }
     
-    // Then every 5 seconds
+    // Then every 3 seconds
     visionIntervalRef.current = setInterval(async () => {
       const frame = captureFrame();
       if (frame) {
-        await analyzeFrameWithVision(frame, true);
+        await analyzeFrameWithVision(frame, false);
       }
-    }, 5000);
+    }, 3000);
   };
 
   // Stop continuous vision analysis
@@ -502,7 +710,18 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
       visionIntervalRef.current = null;
     }
     setVisionEnabled(false);
-    toast.info("Auto vision analysis stopped");
+    setDetectionEnabled(false);
+    toast.info("Vision + object detection stopped");
+  };
+
+  // Toggle object detection (boxes on screen + context for AI)
+  const toggleDetection = () => {
+    setDetectionEnabled((prev) => !prev);
+    if (!detectionEnabled) {
+      toast.success("Object detection on — AI can see what's on screen");
+    } else {
+      toast.info("Object detection off");
+    }
   };
 
   // Toggle vision analysis
@@ -514,6 +733,68 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
     }
   };
 
+  // Inject vision context directly into session instructions so the model always has it
+  useEffect(() => {
+    if (!isConnected || dataChannelRef.current?.readyState !== "open") return;
+
+    const sendContextUpdate = () => {
+      const dc = dataChannelRef.current;
+      if (!dc || dc.readyState !== "open") return;
+
+      const visionText = lastVisionResultRef.current;
+      const detectionContext = buildDetectionContext(detectionsRef.current, null);
+
+      const visionBlock = visionText && visionText.trim()
+        ? `\n\n[CAMERA UPDATE — CURRENT VIEW]\n${visionText}\n${detectionContext}\nUse this to answer any questions about what you see.`
+        : `\n\n[CAMERA STATUS] Camera is active. Visual analysis is loading — say "Let me take a closer look" if asked what you see right now.`;
+
+      dc.send(JSON.stringify({
+        type: "session.update",
+        session: {
+          type: "realtime",
+          instructions: BASE_INSTRUCTIONS + visionBlock,
+        }
+      }));
+    };
+
+    // Send immediately, then every 4s
+    sendContextUpdate();
+    contextUpdateIntervalRef.current = setInterval(sendContextUpdate, 4000);
+
+    return () => {
+      if (contextUpdateIntervalRef.current) {
+        clearInterval(contextUpdateIntervalRef.current);
+        contextUpdateIntervalRef.current = null;
+      }
+    };
+  }, [isConnected, detectionEnabled, visionEnabled, lastVisionResult]);
+
+  // Capture one initial insight automatically once camera is ready
+  useEffect(() => {
+    if (!videoRef.current || initialInsightCapturedRef.current) return;
+    if (cameraError) return;
+
+    const video = videoRef.current;
+    const onReady = () => {
+      if (initialInsightCapturedRef.current) return;
+      setTimeout(() => {
+        const frame = captureFrame();
+        if (frame) {
+          initialInsightCapturedRef.current = true;
+          analyzeFrameWithVision(frame, false);
+        }
+      }, 1200);
+    };
+
+    if (video.readyState >= 2) {
+      onReady();
+    } else {
+      video.addEventListener("loadeddata", onReady, { once: true });
+    }
+
+    return () => video.removeEventListener("loadeddata", onReady);
+  }, [cameraError, captureFrame]);
+
   // Disconnect from Realtime API
   const disconnectRealtime = () => {
     // Stop vision analysis
@@ -521,7 +802,12 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
       clearInterval(visionIntervalRef.current);
       visionIntervalRef.current = null;
     }
+    if (contextUpdateIntervalRef.current) {
+      clearInterval(contextUpdateIntervalRef.current);
+      contextUpdateIntervalRef.current = null;
+    }
     setVisionEnabled(false);
+    setDetectionEnabled(false);
     
     if (dataChannelRef.current) {
       dataChannelRef.current.close();
@@ -548,22 +834,6 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
       connectRealtime();
     }
   };
-
-  // Capture frame from video
-  const captureFrame = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return null;
-    
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    ctx.drawImage(video, 0, 0);
-    
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-    return dataUrl.split(',')[1];
-  }, []);
 
   // Toggle microphone
   const toggleMute = () => {
@@ -618,23 +888,93 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
     navigate(`/app/inspections/${id}`);
   };
 
+  const submitInspectorNote = () => {
+    const trimmed = noteDraft.trim();
+    if (!trimmed) return;
+
+    const note = {
+      id: `note-${Date.now()}`,
+      text: trimmed,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setInspectorNotes((prev) => [note, ...prev]);
+    setNoteDraft("");
+    toast.success("Note saved");
+  };
+
+  useEffect(() => {
+    if (!isGeneratingReport) {
+      setReportStage(0);
+      return;
+    }
+
+    let stage = 0;
+    const timer = setInterval(() => {
+      stage += 1;
+      setReportStage(Math.min(stage, REPORT_STAGES.length - 1));
+      if (stage >= REPORT_STAGES.length - 1) {
+        clearInterval(timer);
+      }
+    }, 550);
+
+    return () => clearInterval(timer);
+  }, [isGeneratingReport]);
+
+  const topDetection = detections?.[0];
+  const insightCategory = topDetection ? `${topDetection.label} presence` : "Scene assessment";
+  const insightConfidence = Math.round((topDetection?.score ?? 0.89) * 100);
+  const insightSeverity = findings.some((f) => f.severity === "HIGH")
+    ? "Critical"
+    : findings.some((f) => f.severity === "MEDIUM")
+    ? "Monitor"
+    : "Normal";
+  const insightAction = topDetection?.label?.toLowerCase().includes("person")
+    ? "Ensure personnel clear of operational zone."
+    : topDetection?.label?.toLowerCase().includes("vehicle")
+    ? "Verify separation from moving equipment path."
+    : "Continue scan and validate clearance envelope.";
+
   // Loading state
   if (isGeneratingReport) {
     return (
-      <div className="h-[calc(100vh-4rem)] bg-slate-900 flex items-center justify-center" data-testid="generating-report">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#F7B500] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-          <h2 className="text-[22px] font-bold text-white mb-2">Generating Report</h2>
-          <p className="text-slate-400 text-[14px]">
-            AI is analyzing findings and creating your inspection report...
-          </p>
+      <div className="h-[calc(100vh-4rem)] bg-[#07090d] flex items-center justify-center" data-testid="generating-report">
+        <div className="w-full max-w-xl rounded-xl border border-cyan-500/20 bg-[#0d1118] p-8 shadow-[0_16px_60px_rgba(0,0,0,0.45)]">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-[24px] font-semibold tracking-tight text-white">Generating Structured Report</h2>
+            <div className="h-3 w-3 rounded-full bg-cyan-400 animate-pulse" />
+          </div>
+          <div className="space-y-3">
+            {REPORT_STAGES.map((stage, index) => (
+              <div
+                key={stage}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border px-3 py-2 text-[13px] transition-all duration-300",
+                  index <= reportStage
+                    ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
+                    : "border-slate-700 bg-slate-900/50 text-slate-400"
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    index < reportStage
+                      ? "bg-[#F7B500]"
+                      : index === reportStage
+                      ? "bg-cyan-400 animate-pulse"
+                      : "bg-slate-600"
+                  )}
+                />
+                <span>{stage}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] bg-slate-900 flex flex-col" data-testid="live-inspection-page">
+    <div className="h-[calc(100vh-4rem)] bg-[#07090d] flex flex-col text-slate-100" data-testid="live-inspection-page">
       <canvas ref={canvasRef} className="hidden" />
       
       <div className="flex-1 flex relative overflow-hidden">
@@ -664,8 +1004,16 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
                 className="w-full h-full object-cover"
                 data-testid="camera-feed"
               />
-              <div className="gradient-fade-down absolute inset-x-0 top-0 h-32 pointer-events-none" />
-              <div className="gradient-fade-up absolute inset-x-0 bottom-0 h-48 pointer-events-none" />
+              {/* Object detection overlay - boxes drawn here when detection enabled */}
+              <canvas
+                ref={detectionCanvasRef}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                style={{ zIndex: 5 }}
+                aria-hidden
+              />
+              <div className="live-vignette" />
+              <div className="gradient-fade-down absolute inset-x-0 top-0 h-28 pointer-events-none" style={{ zIndex: 5 }} />
+              <div className="gradient-fade-up absolute inset-x-0 bottom-0 h-32 pointer-events-none" style={{ zIndex: 5 }} />
             </>
           )}
 
@@ -673,34 +1021,41 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
           <div className="live-overlay-header">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="live-equipment-badge">
-                  <Truck className="w-4 h-4" />
-                  <span>CAT D6 Dozer</span>
+                <div className="rounded-lg border border-white/15 bg-black/45 px-3 py-2 backdrop-blur-lg">
+                  <div className="mb-1 flex items-center gap-2 text-[12px] font-semibold text-white">
+                    <Truck className="h-3.5 w-3.5 text-[#F7B500]" />
+                    <span>CAT D6 Dozer</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-[10px] uppercase tracking-wider text-slate-300">
+                    <span>Model D6</span>
+                    <span>Serial X8R21</span>
+                    <span>Daily Walkaround</span>
+                  </div>
                 </div>
                 
                 {/* Connection Status */}
-                {(isConnected || visionEnabled) && (
+                {(isConnected || visionEnabled || detectionEnabled) && (
                   <div className={cn(
-                    "live-equipment-badge",
+                    "live-equipment-badge ai-status-badge border-cyan-500/30",
                     aiStatus === "speaking" ? "bg-[#F7B500]/20 border-[#F7B500]/30" :
                     aiStatus === "listening" ? "bg-emerald-500/20 border-emerald-500/30" :
-                    aiStatus === "thinking" ? "bg-blue-500/20 border-blue-500/30" :
-                    aiStatus === "analyzing" ? "bg-purple-500/20 border-purple-500/30" :
+                    aiStatus === "thinking" ? "bg-cyan-500/20 border-cyan-500/40" :
+                    aiStatus === "analyzing" ? "bg-cyan-500/20 border-cyan-500/40" :
                     "bg-slate-500/20 border-slate-500/30"
                   )}>
                     <Brain className={cn(
                       "w-4 h-4",
                       aiStatus === "speaking" ? "text-[#F7B500]" :
                       aiStatus === "listening" ? "text-emerald-400" :
-                      aiStatus === "thinking" ? "text-blue-400" :
-                      aiStatus === "analyzing" ? "text-purple-400" :
+                      aiStatus === "thinking" ? "text-cyan-300" :
+                      aiStatus === "analyzing" ? "text-cyan-300" :
                       "text-slate-400"
                     )} />
                     <span className={cn(
                       aiStatus === "speaking" ? "text-[#F7B500]" :
                       aiStatus === "listening" ? "text-emerald-400" :
-                      aiStatus === "thinking" ? "text-blue-400" :
-                      aiStatus === "analyzing" ? "text-purple-400" :
+                      aiStatus === "thinking" ? "text-cyan-300" :
+                      aiStatus === "analyzing" ? "text-cyan-300" :
                       "text-slate-400"
                     )}>
                       {aiStatus === "speaking" ? "AI Speaking" :
@@ -713,7 +1068,7 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
                       <span className={cn(
                         "w-2 h-2 rounded-full animate-pulse",
                         aiStatus === "speaking" ? "bg-[#F7B500]" : 
-                        aiStatus === "analyzing" ? "bg-purple-400" :
+                        aiStatus === "analyzing" ? "bg-cyan-300" :
                         "bg-emerald-400"
                       )} />
                     )}
@@ -748,9 +1103,11 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
           {/* AI Speaking Indicator */}
           {aiStatus === "speaking" && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-              <div className="w-32 h-32 rounded-full bg-[#F7B500]/20 flex items-center justify-center animate-pulse">
-                <div className="w-24 h-24 rounded-full bg-[#F7B500]/40 flex items-center justify-center">
-                  <Volume2 className="w-12 h-12 text-[#F7B500]" />
+              <div className="ai-speaking-ring-outer">
+                <div className="ai-speaking-ring-mid">
+                  <div className="ai-speaking-ring-inner">
+                    <Volume2 className="w-10 h-10 text-[#F7B500] drop-shadow-lg" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -759,168 +1116,266 @@ Start by greeting the inspector and asking what equipment they're inspecting tod
           {/* Last Transcript */}
           {lastTranscript && isConnected && (
             <div className="absolute bottom-24 left-4 right-4 pointer-events-none">
-              <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 max-w-md">
-                <p className="text-[11px] text-slate-400 mb-1">You said:</p>
-                <p className="text-[13px] text-white">{lastTranscript}</p>
+              <div className="transcript-overlay-enter bg-black/50 backdrop-blur-xl rounded-2xl p-4 max-w-md border border-white/10">
+                <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold mb-1.5">You said</p>
+                <p className="text-[13px] text-white/90 leading-relaxed">{lastTranscript}</p>
               </div>
             </div>
           )}
 
-          {/* Last Vision Result */}
-          {lastVisionResult && visionEnabled && (
+          {/* Structured AI Insight Card */}
+          {(lastVisionResult || topDetection) && (visionEnabled || detectionEnabled) && (
             <div className="absolute bottom-24 right-4 pointer-events-none max-w-sm">
-              <div className="bg-purple-900/80 backdrop-blur-sm rounded-lg p-3 border border-purple-500/30">
-                <div className="flex items-center gap-2 mb-1">
-                  <Eye className="w-3 h-3 text-purple-400" />
-                  <p className="text-[11px] text-purple-300">Vision AI:</p>
+              <div className="vision-overlay-enter rounded-lg border border-cyan-400/35 bg-[#081018]/98 p-4 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+                <div className="mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
+                  <Brain className="h-4 w-4 text-cyan-300" />
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-sky-300 font-semibold">AI INSPECTION</p>
                 </div>
-                <p className="text-[13px] text-white">{lastVisionResult}</p>
+                <div className="space-y-1.5 text-[12px]">
+                  <p><span className="text-slate-300">Category:</span> <span className="text-white font-medium">{insightCategory}</span></p>
+                  <p><span className="text-slate-300">Confidence:</span> <span className="text-sky-300 font-semibold">{insightConfidence}%</span></p>
+                  <p><span className="text-slate-300">Severity:</span> <span className={cn("font-semibold", insightSeverity === "Critical" ? "text-red-300" : insightSeverity === "Monitor" ? "text-amber-300" : "text-emerald-300")}>{insightSeverity}</span></p>
+                  <p className="pt-1"><span className="text-slate-300">Action:</span> <span className="text-white">{insightAction}</span></p>
+                </div>
               </div>
             </div>
           )}
         </div>
 
         {/* Right Rail - Live Findings */}
-        <div className="w-80 xl:w-96 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 hidden md:block overflow-hidden">
-          <LiveFindingsTimeline findings={findings} isRecording={isConnected} />
+        <div className="w-80 xl:w-96 bg-[#0d1118] border-l border-slate-800 hidden md:flex md:flex-col overflow-hidden">
+          <div className="min-h-0 h-[40%]">
+            <LiveFindingsTimeline findings={findings} isRecording={isConnected} />
+          </div>
+          <div className="border-t border-slate-800 bg-[#0b0f16] p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-wider text-sky-300 font-semibold">Inspection Insights</p>
+              <span className="text-[10px] text-slate-400">{inspectionInsights.length} captured</span>
+            </div>
+            <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+              {inspectionInsights.length === 0 ? (
+                <p className="text-[11px] text-slate-500">No AI insights yet. Start vision or capture a frame.</p>
+              ) : (
+                inspectionInsights.map((insight) => (
+                  <div key={insight.id} className="rounded-md border border-slate-700 bg-slate-900/80 p-2.5">
+                    <div className="mb-2 flex gap-2">
+                      <img
+                        src={insight.imageUrl}
+                        alt="inspection snapshot"
+                        className="h-16 w-24 rounded border border-slate-700 object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] text-white font-medium truncate">{insight.category}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{insight.timestamp}</p>
+                        <p className="text-[10px] text-slate-300 mt-1 line-clamp-2">{insight.summary}</p>
+                        {insight.confirmations > 1 && (
+                          <p className="text-[10px] text-cyan-300 mt-1">Confirmed across {insight.confirmations} frames</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[10px] mb-2">
+                      <p className="text-slate-300">
+                        Severity:{" "}
+                        <span className={cn(
+                          "font-semibold",
+                          insight.severityRecommendation === "HIGH"
+                            ? "text-red-300"
+                            : insight.severityRecommendation === "MEDIUM"
+                            ? "text-amber-300"
+                            : "text-emerald-300"
+                        )}>
+                          {insight.severityRecommendation}
+                        </span>
+                      </p>
+                      <p className="text-slate-300">
+                        Confidence: <span className="text-sky-300 font-semibold">{insight.confidence}%</span>
+                      </p>
+                    </div>
+                    <p className="mb-2 text-[10px] text-slate-300">
+                      <span className="text-slate-400">AI recommendation:</span>{" "}
+                      <span className="text-white">{insight.aiRecommendation}</span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={insight.inspectorDecision}
+                        onChange={(e) => setInsightDecision(insight.id, e.target.value)}
+                        className="h-8 flex-1 rounded border border-slate-700 bg-slate-950 text-[11px] text-white px-2 focus:outline-none focus:border-sky-400"
+                        data-testid={`insight-decision-${insight.id}`}
+                      >
+                        <option value="PASS">PASS</option>
+                        <option value="FAIL">FAIL</option>
+                        <option value="FURTHER INSPECTION">FURTHER INSPECTION</option>
+                      </select>
+                      <button
+                        onClick={() => confirmInsightDecision(insight.id)}
+                        className={cn(
+                          "h-8 px-2.5 rounded border text-[10px] font-semibold transition-colors",
+                          insight.confirmed
+                            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                            : "border-sky-500/40 bg-sky-500/15 text-sky-300 hover:bg-sky-500/25"
+                        )}
+                        data-testid={`insight-confirm-${insight.id}`}
+                      >
+                        {insight.confirmed ? "CONFIRMED" : "CONFIRM"}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="border-t border-slate-800 bg-[#0b0f16] p-3">
+            <p className="mb-2 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Inspector Notes</p>
+            <div className="mb-2 flex gap-2">
+              <input
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="Add short note..."
+                className="flex-1 h-9 rounded-md border border-slate-700 bg-slate-900 text-white px-3 text-[12px] placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+                data-testid="inspector-note-input"
+              />
+              <button
+                onClick={submitInspectorNote}
+                className="h-9 px-3 rounded-md bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[12px] font-semibold hover:bg-sky-500/30"
+                data-testid="inspector-note-submit"
+              >
+                Submit
+              </button>
+            </div>
+            <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1">
+              {inspectorNotes.length === 0 ? (
+                <p className="text-[11px] text-slate-500">No notes yet.</p>
+              ) : (
+                inspectorNotes.map((note) => (
+                  <div key={note.id} className="rounded-md border border-slate-700 bg-slate-900/70 px-2 py-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[12px] text-slate-100 break-words">{note.text}</p>
+                      <span className="text-[10px] text-slate-500 whitespace-nowrap">{note.timestamp}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Bottom Control Bar */}
-      <div className="live-control-bar">
-        <div className="flex items-center justify-center gap-3 sm:gap-4">
-          {/* Connect/Disconnect AI */}
-          <button
-            className={cn(
-              "live-control-btn touch-target-lg relative",
-              isConnected 
-                ? "bg-emerald-500 text-white" 
-                : isConnecting
-                ? "bg-blue-500 text-white animate-pulse"
-                : "bg-slate-700 text-white border border-slate-600"
-            )}
-            onClick={toggleConnection}
-            disabled={isConnecting}
-            data-testid="ai-connect-btn"
-          >
-            {isConnected ? (
-              <PhoneOff className="w-6 h-6" />
-            ) : (
-              <Phone className="w-6 h-6" />
-            )}
-          </button>
-
-          {/* Mute/Unmute Mic */}
-          <button
-            className={cn(
-              "live-control-btn touch-target-lg",
-              isMuted ? "bg-red-600 text-white" : "live-control-btn-secondary"
-            )}
-            onClick={toggleMute}
-            data-testid="mic-toggle-btn"
-          >
-            {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-          </button>
-
-          {/* Start/Stop Recording */}
-          <button
-            className={cn(
-              "live-control-btn touch-target-lg",
-              isRecording ? "live-control-btn-danger" : "live-control-btn-secondary"
-            )}
-            onClick={toggleRecording}
-            data-testid="record-btn"
-          >
-            {isRecording ? (
-              <Square className="w-6 h-6" fill="currentColor" />
-            ) : (
-              <Video className="w-6 h-6" />
-            )}
-          </button>
-
-          {/* Capture & Analyze Photo */}
-          <button
-            className={cn(
-              "live-control-btn touch-target-lg",
-              isConnected ? "live-control-btn-primary" : "live-control-btn-secondary"
-            )}
-            onClick={sendImageToAI}
-            data-testid="capture-analyze-btn"
-          >
-            <Camera className="w-6 h-6" />
-          </button>
-
-          {/* Toggle AI Audio */}
-          <button
-            className={cn(
-              "live-control-btn touch-target-lg",
-              !audioEnabled ? "bg-red-600 text-white" : "live-control-btn-secondary"
-            )}
-            onClick={toggleAudioOutput}
-            data-testid="audio-toggle-btn"
-          >
-            {audioEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-          </button>
-
-          {/* Toggle Auto Vision Analysis */}
-          <button
-            className={cn(
-              "live-control-btn touch-target-lg relative",
-              visionEnabled 
-                ? "bg-purple-600 text-white" 
-                : "live-control-btn-secondary"
-            )}
-            onClick={toggleVisionAnalysis}
-            data-testid="vision-toggle-btn"
-            title={visionEnabled ? "Stop auto vision" : "Start auto vision (analyzes every 5s)"}
-          >
-            {visionEnabled ? <Eye className="w-6 h-6" /> : <EyeOff className="w-6 h-6" />}
-            {visionEnabled && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 rounded-full animate-pulse" />
-            )}
-          </button>
-
-          <div className="w-px h-10 bg-slate-700 mx-1 hidden sm:block" />
-
-          {/* Quick Mark Buttons */}
-          <div className="hidden sm:flex items-center gap-2">
+      <div className="live-control-bar border-t border-slate-700/70 bg-[#090c12]">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
+          <div className="flex items-center gap-2">
             <button
-              className="live-quick-mark bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => quickMark("PASS")}
-              data-testid="mark-pass-btn"
+              className={cn(
+                "live-control-btn w-11 h-11 relative border transition-all duration-200",
+                isConnected
+                  ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
+                  : isConnecting
+                  ? "border-cyan-400/60 bg-cyan-500/15 text-cyan-300 animate-pulse"
+                  : "border-slate-600 bg-slate-800/80 text-slate-200 hover:border-slate-400"
+              )}
+              onClick={toggleConnection}
+              disabled={isConnecting}
+              data-testid="ai-connect-btn"
             >
-              <CheckCircle className="w-4 h-4" />
-              PASS
+              {isConnected ? <PhoneOff className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
             </button>
             <button
-              className="live-quick-mark bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => quickMark("FAIL")}
-              data-testid="mark-fail-btn"
+              className={cn(
+                "live-control-btn w-11 h-11 border transition-all duration-200",
+                isMuted ? "border-red-400/60 bg-red-500/20 text-red-300" : "border-slate-600 bg-slate-800/80 text-slate-200 hover:border-slate-400"
+              )}
+              onClick={toggleMute}
+              data-testid="mic-toggle-btn"
             >
-              <XCircle className="w-4 h-4" />
-              FAIL
+              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
             <button
-              className="live-quick-mark bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={() => quickMark("MONITOR")}
-              data-testid="mark-monitor-btn"
+              className={cn(
+                "live-control-btn w-11 h-11 border transition-all duration-200",
+                !audioEnabled ? "border-red-400/60 bg-red-500/20 text-red-300" : "border-slate-600 bg-slate-800/80 text-slate-200 hover:border-slate-400"
+              )}
+              onClick={toggleAudioOutput}
+              data-testid="audio-toggle-btn"
             >
-              <AlertTriangle className="w-4 h-4" />
-              MONITOR
+              {audioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            </button>
+            <button
+              className={cn(
+                "live-control-btn w-11 h-11 relative border transition-all duration-200",
+                detectionEnabled ? "border-[#F7B500]/60 bg-[#F7B500]/15 text-[#F7B500]" : "border-slate-600 bg-slate-800/80 text-slate-200 hover:border-slate-400"
+              )}
+              onClick={toggleDetection}
+              data-testid="detection-toggle-btn"
+            >
+              <Scan className="w-5 h-5" />
+            </button>
+            <button
+              className={cn(
+                "live-control-btn w-11 h-11 relative border transition-all duration-200",
+                visionEnabled ? "border-cyan-400/60 bg-cyan-500/15 text-cyan-300" : "border-slate-600 bg-slate-800/80 text-slate-200 hover:border-slate-400"
+              )}
+              onClick={toggleVisionAnalysis}
+              data-testid="vision-toggle-btn"
+            >
+              {visionEnabled ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
             </button>
           </div>
 
-          <div className="w-px h-10 bg-slate-700 mx-1 hidden sm:block" />
+          <div className="flex items-center justify-center gap-3">
+            <button
+              className={cn(
+                "live-control-btn w-14 h-14 border-2 transition-all duration-200",
+                isRecording
+                  ? "border-red-400 bg-red-500/20 text-red-300"
+                  : "border-slate-500 bg-slate-800 text-white hover:border-red-400/70"
+              )}
+              onClick={toggleRecording}
+              data-testid="record-btn"
+            >
+              {isRecording ? <Square className="w-7 h-7" fill="currentColor" /> : <Video className="w-7 h-7" />}
+            </button>
+            <button
+              className="live-control-btn w-14 h-14 border-2 border-[#F7B500] bg-[#F7B500]/15 text-[#F7B500] hover:bg-[#F7B500]/25 transition-all duration-200"
+              onClick={sendImageToAI}
+              data-testid="capture-analyze-btn"
+            >
+              <Camera className="w-7 h-7" />
+            </button>
+          </div>
 
-          {/* Finish Inspection */}
-          <Button
-            size="lg"
-            className="h-12 bg-[#F7B500] hover:bg-[#E5A800] text-slate-900 font-semibold rounded-full px-6 text-[14px]"
-            onClick={finishInspection}
-            data-testid="finish-inspection-btn"
-          >
-            Finish Inspection
-          </Button>
+          <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center rounded-lg border border-slate-600 bg-slate-900/70 p-1">
+              <button
+                className="rounded-md px-3 py-1.5 text-[12px] font-semibold text-emerald-300 hover:bg-emerald-500/15"
+                onClick={() => quickMark("PASS")}
+                data-testid="mark-pass-btn"
+              >
+                PASS
+              </button>
+              <button
+                className="rounded-md px-3 py-1.5 text-[12px] font-semibold text-red-300 hover:bg-red-500/15"
+                onClick={() => quickMark("FAIL")}
+                data-testid="mark-fail-btn"
+              >
+                FAIL
+              </button>
+              <button
+                className="rounded-md px-3 py-1.5 text-[12px] font-semibold text-amber-300 hover:bg-amber-500/15"
+                onClick={() => quickMark("MONITOR")}
+                data-testid="mark-monitor-btn"
+              >
+                MONITOR
+              </button>
+            </div>
+            <Button
+              size="lg"
+              className="h-12 bg-[#F7B500] hover:bg-[#E5A800] text-slate-900 font-semibold rounded-lg px-8 text-[14px] border border-[#f3d064]"
+              onClick={finishInspection}
+              data-testid="finish-inspection-btn"
+            >
+              Finish Inspection
+            </Button>
+          </div>
         </div>
       </div>
     </div>

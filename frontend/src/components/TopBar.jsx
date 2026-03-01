@@ -46,7 +46,7 @@ export const TopBar = () => {
   const isActive = (path) => location.pathname.includes(path);
 
   return (
-    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between sticky top-0 z-40 transition-colors">
+    <header className="h-14 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between sticky top-0 z-40 transition-colors">
       <div className="flex items-center gap-8">
         {/* Logo */}
         <div 
@@ -54,14 +54,14 @@ export const TopBar = () => {
           onClick={() => navigate("/app/dashboard")}
           data-testid="logo-link"
         >
-          <div className="w-10 h-10 bg-[#F7B500] rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+          <div className="w-9 h-9 bg-[#F7B500] rounded-[10px] flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
             <HardHat className="w-5 h-5 text-slate-900" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-[17px] text-slate-900 dark:text-white leading-tight tracking-tight">
+            <span className="font-bold text-[16px] text-slate-900 dark:text-white leading-tight tracking-tight">
               Cat Inspect
             </span>
-            <span className="text-[10px] text-[#F7B500] font-bold tracking-[0.2em] uppercase">
+            <span className="text-[9px] text-[#F7B500] font-bold tracking-[0.15em] uppercase">
               AI Platform
             </span>
           </div>
@@ -74,7 +74,7 @@ export const TopBar = () => {
             size="sm"
             className={`font-medium text-[14px] h-9 px-3 ${
               isActive("dashboard") 
-                ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" 
+                ? "bg-slate-100/80 dark:bg-slate-800/80 text-slate-900 dark:text-white" 
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
             onClick={() => navigate("/app/dashboard")}
@@ -110,12 +110,12 @@ export const TopBar = () => {
               className="flex items-center gap-2 h-10 px-2 hover:bg-slate-100 dark:hover:bg-slate-800"
               data-testid="profile-dropdown-trigger"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#F7B500] to-[#E5A800] flex items-center justify-center shadow-sm">
-                <span className="text-[13px] font-bold text-slate-900">SN</span>
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#F7B500] to-[#E5A800] flex items-center justify-center shadow-sm">
+                <span className="text-[12px] font-bold text-slate-900">SN</span>
               </div>
               <div className="hidden sm:flex flex-col items-start">
                 <span className="text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">Sriram N.</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Inspector</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">Inspector</span>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
             </Button>

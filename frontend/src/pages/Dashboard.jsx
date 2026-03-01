@@ -6,7 +6,7 @@ import { InspectionTable } from "@/components/InspectionTable";
 import { ChatDock } from "@/components/ChatDock";
 import { AnalyticsCards } from "@/components/AnalyticsCards";
 
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL } from "@/lib/api";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -59,9 +59,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-slate-50 dark:bg-slate-950 page-enter" data-testid="dashboard-page">
+    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-background page-enter" data-testid="dashboard-page">
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 p-5 h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 h-full">
         {/* Left Panel - Inspections Table */}
         <div className="lg:col-span-8 flex flex-col h-full overflow-hidden pb-20 lg:pb-0">
           <InspectionTable

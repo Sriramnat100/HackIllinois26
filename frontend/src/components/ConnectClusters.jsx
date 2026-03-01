@@ -10,7 +10,7 @@ export const ConnectClusters = ({ clusters = [] }) => {
       {clusters.map((cluster, index) => (
         <div
           key={cluster.id}
-          className="card-enterprise p-4 group cursor-pointer hover:border-[#F7B500]/50"
+          className="card-enterprise p-4 group cursor-pointer"
           onClick={() => navigate(`/app/inspections/${cluster.id}`)}
           data-testid={`cluster-${cluster.id}`}
         >
@@ -24,7 +24,7 @@ export const ConnectClusters = ({ clusters = [] }) => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-semibold text-[14px] text-slate-900 dark:text-white truncate group-hover:text-[#F7B500] transition-colors">
+                <h4 className="font-semibold text-[14px] text-slate-900 dark:text-white truncate group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
                   {cluster.title}
                 </h4>
                 <span className="text-[11px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
