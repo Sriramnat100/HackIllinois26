@@ -23,12 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "./StatusBadge";
 import { 
@@ -55,7 +49,6 @@ const defaultNewRow = {
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export const InspectionTable = ({ inspections, onSearch, onFilter }) => {
 export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -166,6 +159,8 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
       .catch(() => {
         window.open(url, "_blank");
       });
+  };
+
   const handleExport = () => {
     const headers = ["Asset ID", "Owning Org", "Equipment Model", "Serial Number", "Customer", "Location", "Date", "Status", "Inspection Type"];
     const rows = inspections.map((i) => [
@@ -525,5 +520,3 @@ export const InspectionTable = ({ inspections, onSearch, onFilter, onAddRow }) =
     </div>
   );
 };
-
-export default InspectionTable;

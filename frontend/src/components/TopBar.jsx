@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +22,17 @@ import {
 export const TopBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/", { replace: true });
+  };
+
+  const initials = user ? user.slice(0, 2).toUpperCase() : "??";
+  const displayName = user || "User";
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -111,10 +121,10 @@ export const TopBar = () => {
               data-testid="profile-dropdown-trigger"
             >
               <div className="icon-glass icon-glass-md rounded-full">
-                <span className="text-[13px] font-bold text-slate-600 dark:text-white">SN</span>
+                <span className="text-[13px] font-bold text-slate-600 dark:text-white">{initials}</span>
               </div>
               <div className="hidden sm:flex flex-col items-start">
-                <span className="text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">Sriram N.</span>
+                <span className="text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">{displayName}</span>
                 <span className="text-[11px] text-slate-500 dark:text-white/90">Inspector</span>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 dark:text-white/80 hidden sm:block" />
@@ -122,8 +132,8 @@ export const TopBar = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
             <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
-              <p className="text-[14px] font-semibold text-slate-900 dark:text-white">Sriram Nagarajan</p>
-              <p className="text-[12px] text-slate-500 dark:text-white/90">Field Inspector • Dallas Region</p>
+              <p className="text-[14px] font-semibold text-slate-900 dark:text-white">{displayName}</p>
+              <p className="text-[12px] text-slate-500 dark:text-white/90">Field Inspector</p>
             </div>
             <div className="py-1">
               <DropdownMenuItem className="cursor-pointer text-[13px] py-2 px-3 text-slate-700 dark:text-white" data-testid="settings-menu-item">
@@ -133,7 +143,7 @@ export const TopBar = () => {
             </div>
             <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
             <div className="py-1">
-              <DropdownMenuItem className="cursor-pointer text-[13px] py-2 px-3 text-red-600 dark:text-red-400" data-testid="logout-menu-item">
+              <DropdownMenuItem className="cursor-pointer text-[13px] py-2 px-3 text-red-600 dark:text-red-400" data-testid="logout-menu-item" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2.5" />
                 Sign Out
               </DropdownMenuItem>
