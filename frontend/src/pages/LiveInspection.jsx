@@ -74,7 +74,18 @@ export default function LiveInspection() {
   const [noteDraft, setNoteDraft] = useState("");
   const [inspectorNotes, setInspectorNotes] = useState([]);
   const [inspectionInsights, setInspectionInsights] = useState([]);
-  const visionIntervalRef = useRef(null);
+  // WebRTC camera link to the backend (video track + "inspection" data channel for findings)
+  const cameraPcRef = useRef(null);
+  const cameraChannelRef = useRef(null);
+  const [cameraLink, setCameraLink] = useState("off"); // off, connecting, live
+  const [latestVision, setLatestVision] = useState(null);
+  const [inspectionInfo, setInspectionInfo] = useState(null);
+
+  useEffect(() => {
+    axios.get(`${API_URL}/inspections/${id}`)
+      .then(({ data }) => setInspectionInfo(data))
+      .catch((error) => console.error("Failed to load inspection:", error));
+  }, [id]);
   const contextUpdateIntervalRef = useRef(null);
   const detectionsRef = useRef([]);
   const lastVisionResultRef = useRef("");
@@ -141,6 +152,7 @@ export default function LiveInspection() {
 
     return () => {
       disconnectRealtime();
+      stopCameraLink(true);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
@@ -430,43 +442,46 @@ export default function LiveInspection() {
     }
   };
 
-  // Send image to AI for analysis (manual capture)
+  // Manual capture: analyze the current frame now and keep it as report evidence
   const sendImageToAI = async () => {
+    const channel = cameraChannelRef.current;
+    if (channel && channel.readyState === "open") {
+      channel.send(JSON.stringify({ type: "capture" }));
+      toast.info("Capturing frame for analysis...");
+      return;
+    }
+
     const imageBase64 = captureFrame();
     if (!imageBase64) {
       toast.error("No camera feed available");
       return;
     }
-
-    // Save photo
-    try {
-      await axios.post(`${API_URL}/inspections/${id}/media`, {
-        inspection_id: id,
-        media_type: "photo",
-        data_base64: imageBase64,
-        caption: "Captured during inspection",
-        timestamp: new Date().toLocaleTimeString()
-      });
-    } catch (error) {
-      console.error("Failed to save photo:", error);
-    }
-
-    // Analyze with GPT-4o Vision API
-    await analyzeFrameWithVision(imageBase64, true);
-    toast.success("Photo captured and analyzed");
+    const result = await analyzeFrameWithVision(imageBase64, true);
+    if (result) toast.success("Photo captured and analyzed");
   };
 
-  // Analyze a frame using GPT-4o Vision API
+  // HTTP fallback: analyze one frame with OpenAI Vision when the WebRTC camera link isn't up
   const analyzeFrameWithVision = async (imageBase64, speakResult = false) => {
     try {
       setAiStatus("analyzing");
-      
       const response = await axios.post(`${API_URL}/ai/vision/analyze`, {
         image_base64: imageBase64,
-        context: "equipment inspection"
+        context: "equipment inspection",
+        inspection_id: id,
       });
+      return await applyVisionResult(response.data, imageBase64, speakResult);
+    } catch (error) {
+      console.error("Vision analysis error:", error);
+      toast.error(error.response?.data?.detail || "Vision analysis failed");
+      setAiStatus(isConnected ? "listening" : "idle");
+      return null;
+    }
+  };
 
-      const result = response.data;
+  // Show a Vision result (from the WebRTC camera link or the HTTP fallback) as insights + findings
+  const applyVisionResult = async (result, imageBase64, speakResult = false) => {
+    try {
+      setLatestVision(result);
       setLastVisionResult(result.spoken_response || result.analysis);
 
       // Build an insight card entry for right-rail history
@@ -610,10 +625,10 @@ export default function LiveInspection() {
           id: `f-${Date.now()}-${idx}`,
           timestamp: new Date().toLocaleTimeString(),
           severity: f.severity || "MEDIUM",
-          title: f.issue || "Issue detected",
+          title: f.component ? `${f.component}: ${f.issue}` : (f.issue || "Issue detected"),
           recommendation: f.recommendation || "",
-          confidence: 0.9,
-          category: "Vision AI"
+          confidence: f.confidence ?? 0.5,
+          category: f.component || "Vision AI"
         }));
 
         setFindings(prev => [...newFindings, ...prev].slice(0, 20));
@@ -622,6 +637,14 @@ export default function LiveInspection() {
           toast.error("Safety Alert!", {
             description: result.analysis,
           });
+          // If the voice assistant is on, have it warn the inspector out loud
+          const voice = dataChannelRef.current;
+          if (voice && voice.readyState === "open") {
+            voice.send(JSON.stringify({
+              type: "response.create",
+              response: { instructions: `In one short sentence, warn the inspector about this safety finding: ${result.analysis}` },
+            }));
+          }
         }
       }
 
@@ -680,38 +703,92 @@ export default function LiveInspection() {
     }
   };
 
-  // Start continuous vision analysis
-  const startVisionAnalysis = () => {
-    if (visionIntervalRef.current) return;
-    
+  // Messages from the backend over the camera link's data channel
+  const handleCameraMessage = (msg) => {
+    if (msg.type === "status" && msg.state === "analyzing") {
+      setAiStatus("analyzing");
+    } else if (msg.type === "analysis") {
+      applyVisionResult(msg.result, msg.snapshot, msg.source === "capture");
+      if (msg.source === "capture") toast.success("Frame captured and analyzed");
+    } else if (msg.type === "error") {
+      setAiStatus(isConnected ? "listening" : "idle");
+      toast.error(msg.message);
+    }
+  };
+  const cameraMessageHandlerRef = useRef(handleCameraMessage);
+  cameraMessageHandlerRef.current = handleCameraMessage;
+
+  // Stream the camera to the backend over WebRTC; the backend runs OpenAI Vision on the live feed
+  const startVisionAnalysis = async () => {
+    if (cameraPcRef.current) return;
+    const videoTrack = streamRef.current?.getVideoTracks()[0];
+    if (!videoTrack) {
+      toast.error("No camera feed available");
+      return;
+    }
+
+    setCameraLink("connecting");
     setVisionEnabled(true);
     setDetectionEnabled(true);
-    toast.success("Vision + object detection enabled");
-    
-    // Analyze immediately (don't auto-speak; results are injected as context for the voice AI)
-    const imageBase64 = captureFrame();
-    if (imageBase64) {
-      analyzeFrameWithVision(imageBase64, false);
+    try {
+      const pc = new RTCPeerConnection();
+      cameraPcRef.current = pc;
+      pc.addTrack(videoTrack, streamRef.current);
+
+      const channel = pc.createDataChannel("inspection");
+      cameraChannelRef.current = channel;
+      channel.onopen = () => {
+        setCameraLink("live");
+        toast.success("Live camera streaming to inspection AI");
+      };
+      channel.onmessage = (e) => cameraMessageHandlerRef.current(JSON.parse(e.data));
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+          toast.warning("Camera link lost. Turn vision off and on to reconnect.");
+          setCameraLink("off");
+        }
+      };
+
+      await pc.setLocalDescription(await pc.createOffer());
+      // The backend doesn't do trickle ICE, so send the offer once all candidates are gathered
+      await new Promise((resolve) => {
+        if (pc.iceGatheringState === "complete") return resolve();
+        const done = () => pc.iceGatheringState === "complete" && resolve();
+        pc.addEventListener("icegatheringstatechange", done);
+        setTimeout(resolve, 3000);
+      });
+
+      const { data: answer } = await axios.post(`${API_URL}/inspections/${id}/camera/offer`, {
+        sdp: pc.localDescription.sdp,
+        type: pc.localDescription.type,
+      });
+      await pc.setRemoteDescription(answer);
+    } catch (error) {
+      console.error("Camera link error:", error);
+      toast.error("Could not start live analysis: " + (error.response?.data?.detail || error.message));
+      stopVisionAnalysis(true);
     }
-    
-    // Then every 3 seconds
-    visionIntervalRef.current = setInterval(async () => {
-      const frame = captureFrame();
-      if (frame) {
-        await analyzeFrameWithVision(frame, false);
-      }
-    }, 3000);
   };
 
-  // Stop continuous vision analysis
-  const stopVisionAnalysis = () => {
-    if (visionIntervalRef.current) {
-      clearInterval(visionIntervalRef.current);
-      visionIntervalRef.current = null;
+  const stopCameraLink = (silent = false) => {
+    if (cameraChannelRef.current) {
+      try { cameraChannelRef.current.close(); } catch (e) {}
+      cameraChannelRef.current = null;
     }
+    if (cameraPcRef.current) {
+      try { cameraPcRef.current.close(); } catch (e) {}
+      cameraPcRef.current = null;
+      axios.delete(`${API_URL}/inspections/${id}/camera`).catch(() => {});
+    }
+    setCameraLink("off");
+    if (!silent) toast.info("Live analysis stopped");
+  };
+
+  const stopVisionAnalysis = (silent = false) => {
+    stopCameraLink(silent);
     setVisionEnabled(false);
     setDetectionEnabled(false);
-    toast.info("Vision + object detection stopped");
   };
 
   // Toggle object detection (boxes on screen + context for AI)
@@ -795,20 +872,13 @@ export default function LiveInspection() {
     return () => video.removeEventListener("loadeddata", onReady);
   }, [cameraError, captureFrame]);
 
-  // Disconnect from Realtime API
+  // Disconnect from Realtime API (voice only; the camera link keeps running)
   const disconnectRealtime = () => {
-    // Stop vision analysis
-    if (visionIntervalRef.current) {
-      clearInterval(visionIntervalRef.current);
-      visionIntervalRef.current = null;
-    }
     if (contextUpdateIntervalRef.current) {
       clearInterval(contextUpdateIntervalRef.current);
       contextUpdateIntervalRef.current = null;
     }
-    setVisionEnabled(false);
-    setDetectionEnabled(false);
-    
+
     if (dataChannelRef.current) {
       dataChannelRef.current.close();
       dataChannelRef.current = null;
@@ -877,14 +947,30 @@ export default function LiveInspection() {
   const finishInspection = async () => {
     setIsGeneratingReport(true);
     disconnectRealtime();
-    
+    stopVisionAnalysis(true);
+
     if (isRecording) setIsRecording(false);
-    
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Build the maintenance report from the analyzed frames, quick marks, and notes
+    try {
+      const manualMarks = findings
+        .filter((f) => f.category === "Manual")
+        .map((f) => ({ severity: f.severity, issue: f.title, recommendation: f.recommendation, timestamp: f.timestamp }));
+      const { data } = await axios.post(`${API_URL}/inspections/${id}/finish`, {
+        notes: inspectorNotes.map((n) => n.text),
+        manual_marks: manualMarks,
+      });
+      if (data.report_generated) {
+        toast.success(`Report ready: ${data.findings} finding(s) from ${data.frames_analyzed} analyzed frame(s)`);
+      }
+    } catch (error) {
+      console.error("Finish inspection error:", error);
+      toast.error("Could not generate the report: " + (error.response?.data?.detail || error.message));
+    }
     navigate(`/app/inspections/${id}`);
   };
 
@@ -920,19 +1006,24 @@ export default function LiveInspection() {
     return () => clearInterval(timer);
   }, [isGeneratingReport]);
 
+  // Overlay shows the latest OpenAI Vision result; MediaPipe labels are only a placeholder until then
   const topDetection = detections?.[0];
-  const insightCategory = topDetection ? `${topDetection.label} presence` : "Scene assessment";
-  const insightConfidence = Math.round((topDetection?.score ?? 0.89) * 100);
-  const insightSeverity = findings.some((f) => f.severity === "HIGH")
+  const topFinding = latestVision?.findings?.[0];
+  const insightCategory = topFinding
+    ? `${topFinding.component}: ${topFinding.issue}`
+    : latestVision?.equipment || (topDetection ? `${topDetection.label} presence` : "Scene assessment");
+  const insightConfidence = Math.round((topFinding?.confidence ?? topDetection?.score ?? 0) * 100);
+  const severityLabel = { HIGH: "Critical", MEDIUM: "Monitor", LOW: "Normal" };
+  const insightSeverity = latestVision
+    ? severityLabel[latestVision.severity] || "Normal"
+    : findings.some((f) => f.severity === "HIGH")
     ? "Critical"
     : findings.some((f) => f.severity === "MEDIUM")
     ? "Monitor"
     : "Normal";
-  const insightAction = topDetection?.label?.toLowerCase().includes("person")
-    ? "Ensure personnel clear of operational zone."
-    : topDetection?.label?.toLowerCase().includes("vehicle")
-    ? "Verify separation from moving equipment path."
-    : "Continue scan and validate clearance envelope.";
+  const insightAction = topFinding?.recommendation
+    || latestVision?.spoken_response
+    || "Turn on live analysis to inspect the equipment in view.";
 
   // Loading state
   if (isGeneratingReport) {
@@ -1024,12 +1115,11 @@ export default function LiveInspection() {
                 <div className="rounded-lg border border-white/15 bg-black/45 px-3 py-2 backdrop-blur-lg">
                   <div className="mb-1 flex items-center gap-2 text-[12px] font-semibold text-white">
                     <Truck className="h-3.5 w-3.5 text-[#F7B500]" />
-                    <span>CAT D6 Dozer</span>
+                    <span>{inspectionInfo?.equipment_model || "Equipment"}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-[10px] uppercase tracking-wider text-slate-300">
-                    <span>Model D6</span>
-                    <span>Serial X8R21</span>
-                    <span>Daily Walkaround</span>
+                  <div className="grid grid-cols-2 gap-3 text-[10px] uppercase tracking-wider text-slate-300">
+                    <span>Serial {inspectionInfo?.serial_number || "—"}</span>
+                    <span>{inspectionInfo?.inspection_type || "Inspection"}</span>
                   </div>
                 </div>
                 
@@ -1316,6 +1406,7 @@ export default function LiveInspection() {
               )}
               onClick={toggleVisionAnalysis}
               data-testid="vision-toggle-btn"
+              title={cameraLink === "live" ? "Live analysis on (WebRTC)" : cameraLink === "connecting" ? "Connecting camera..." : "Start live analysis"}
             >
               {visionEnabled ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
             </button>

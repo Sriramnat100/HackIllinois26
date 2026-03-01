@@ -140,14 +140,18 @@ The in-app AI assistant supports inspection-related questions, failure summaries
 
 - **Chatbot** — Text chat with context from inspection data and/or uploaded PDFs; summarization, key insights, risks, action items; optional chart generation (bar) in response.
 - **Document upload** — PDF upload per session; text extraction and truncation for rate-limit safety; clear document and replace.
-- **Vision (optional)** — Camera/image analysis endpoint for equipment issues (e.g. GPT-4o Vision); usable from live inspection flows.
+- **Vision** — OpenAI Vision (structured output) returns safety findings per frame: component, issue, severity (LOW/MEDIUM/HIGH), safety risk, recommended action, and confidence. Errors are reported as errors, never replaced with made-up results.
 - **TTS / STT** — Text-to-speech and speech-to-text endpoints for voice-driven workflows.
 - **Rate-limit handling** — Document analysis returns a clear 429 message and suggests waiting or asking for a shorter summary.
 
-### Live Inspection (Optional)
+### Live Inspection
 
-- **Live inspection flow** — Guided inspection with optional AI vision and real-time findings timeline.
+- **WebRTC camera link** — Turning on live analysis (eye button) streams the camera to the backend over WebRTC (`aiortc`). The backend analyzes the latest frame with OpenAI Vision every `VISION_INTERVAL_SECONDS` (default 5) and pushes findings back over a WebRTC data channel. The camera button analyzes the current frame immediately and keeps it as report evidence.
+- **WebRTC voice** — The voice assistant uses the OpenAI Realtime API over WebRTC (`gpt-realtime`). It gets the latest camera findings as context and speaks up when a HIGH/safety finding comes in.
 - **Findings timeline** — Live list of findings as the inspection progresses.
+- **Maintenance report** — Finishing the inspection builds the report from what was actually analyzed: repeated findings are merged across frames, HIGH findings fail the inspection, and MEDIUM ones put it on Monitor. It includes prioritized action items, safety findings, a checklist with evidence, the captured frames, inspector notes, and an AI-written summary grounded in those findings. New inspections no longer start with sample findings. If no usable frames were analyzed, the report says so instead of passing.
+- **Fallback** — If the WebRTC link can't connect, the camera button still sends a single photo to `/api/ai/vision/analyze`, and the result is saved to the report.
+- **Cost** — With `gpt-4o-mini`, each analyzed 720p frame is roughly 26k input tokens, so about $0.004 per frame (about $0.05 per minute at the default 5-second interval).
 
 ---
 
@@ -178,6 +182,9 @@ The in-app AI assistant supports inspection-related questions, failure summaries
 ```
 ├── backend/
 │   ├── server.py          # FastAPI app: inspections, analytics, chat, documents, AI vision, TTS/STT, export
+│   ├── inspection_ai.py   # OpenAI Vision frame analysis + maintenance report builder
+│   ├── camera_rtc.py      # WebRTC camera link (aiortc): receives the live feed, analyzes frames, sends findings back
+│   ├── tests/             # pytest (test_inspection_ai.py, test_live_inspection_api.py run offline)
 │   ├── requirements.txt   # Python dependencies
 │   └── .env               # MONGO_URL, DB_NAME, OPENAI_API_KEY, CORS_ORIGINS, etc.
 ├── frontend/
@@ -244,7 +251,9 @@ Open `http://localhost:3000`. Use the landing “Log In” (any name) to reach t
 | GET    | `/api/inspections/{id}` | Inspection detail (summary, checklist, media, parts, similar issues) |
 | POST   | `/api/inspections` | Create inspection |
 | PUT    | `/api/inspections/{id}/checklist/{item_id}` | Update checklist item result |
-| POST   | `/api/inspections/{id}/finish` | Finish inspection and generate report |
+| POST   | `/api/inspections/{id}/finish` | Close the camera link and build the report from analyzed frames (body: `notes`, `manual_marks`) |
+| POST   | `/api/inspections/{id}/camera/offer` | WebRTC signaling for the live camera link (SDP offer in, answer out) |
+| DELETE | `/api/inspections/{id}/camera` | Close the live camera link |
 | GET    | `/api/analytics` | Aggregated analytics |
 | GET    | `/api/analytics/category/{category}` | Category drill-down (e.g. Hydraulics) |
 | GET    | `/api/export/inspection/{id}/pdf` | Export inspection as PDF |
@@ -254,7 +263,7 @@ Open `http://localhost:3000`. Use the landing “Log In” (any name) to reach t
 | DELETE | `/api/documents` | Clear uploaded document (session) |
 | GET    | `/api/documents/context` | Get current document context (filename, char count) |
 | POST   | `/api/chat` | Chat (inspection + optional document context); returns text and optional chart_data |
-| POST   | `/api/ai/vision/analyze` | Analyze image (base64) for equipment issues |
+| POST   | `/api/ai/vision/analyze` | Analyze one image (base64) for equipment issues; pass `inspection_id` to save it to that report |
 | POST   | `/api/ai/tts` | Text to speech |
 | POST   | `/api/ai/stt` | Speech to text |
 | POST   | `/api/inspections/{id}/media` | Upload inspection media |
@@ -272,7 +281,9 @@ Open `http://localhost:3000`. Use the landing “Log In” (any name) to reach t
 | `MONGO_URL` | MongoDB connection string (optional; app can run with in-memory data) |
 | `DB_NAME` | Database name (e.g. `hackillinois`) |
 | `OPENAI_API_KEY` | OpenAI API key for chat, vision, TTS/STT |
-| `OPENAI_CHAT_MODEL` | Optional; default `gpt-4o-mini` |
+| `OPENAI_CHAT_MODEL` | Optional; default `gpt-4o-mini` (chat, vision, report summaries) |
+| `OPENAI_REALTIME_MODEL` | Optional; voice model for the WebRTC Realtime session, default `gpt-realtime` |
+| `VISION_INTERVAL_SECONDS` | Optional; seconds between automatic analyses of the live camera feed, default `5` |
 | `MAX_DOC_CHAT_CONTEXT_CHARS` | Optional; max document chars sent to chat (default 12000) |
 | `CORS_ORIGINS` | Comma-separated origins (e.g. `http://localhost:3000`) |
 
