@@ -250,7 +250,7 @@ MOCK_INSPECTIONS = [
         "status": "PASS",
         "date": "2025-01-15",
         "inspector": "Sriram N.",
-        "summary": "Equipment in excellent condition. All systems operational.",
+        "summary": "This daily walkaround inspection of the CAT 320 Excavator (serial CAT0320X12345) was completed at BuildCo Industries, Dallas, TX. All major systems were checked and found to be operating within specification: hydraulics, engine, electrical, undercarriage, and safety equipment. No defects or abnormal wear were observed. The equipment is cleared for continued operation with no follow-up required before the next scheduled inspection.",
         "safety_findings": [],
         "action_items": []
     },
@@ -264,7 +264,7 @@ MOCK_INSPECTIONS = [
         "status": "FAIL",
         "date": "2025-01-14",
         "inspector": "Sriram N.",
-        "summary": "Critical hydraulic leak detected in main boom cylinder. Immediate repair required.",
+        "summary": "This safety inspection of the CAT D6 Dozer (serial CAT0D6X67890) at Highway Construction LLC, Austin, TX, identified a critical hydraulic leak in the main boom cylinder that requires immediate attention. The high-pressure line is compromised and was confirmed during visual inspection and pressure testing. All other systems—engine, stick cylinder, coolant, and safety equipment—were within normal parameters. The unit must be taken out of service until the hydraulic line is replaced to prevent equipment failure and safety risk.",
         "safety_findings": ["Hydraulic leak - High pressure line compromised"],
         "action_items": [
             {"priority": 1, "action": "Replace hydraulic line", "risk": "High - Equipment failure risk"},
@@ -281,7 +281,7 @@ MOCK_INSPECTIONS = [
         "status": "MONITOR",
         "date": "2025-01-13",
         "inspector": "Sriram N.",
-        "summary": "Minor wear on bucket teeth. Schedule replacement within 30 days.",
+        "summary": "This TA1 (Technical Assessment Level 1) inspection of the CAT 966 Wheel Loader (serial CAT0966X11111) at Quarry Masters Inc, Houston, TX, found the unit generally in good condition with one notable wear item: the bucket teeth show minor to moderate wear and should be scheduled for replacement within the next 30 days to avoid reduced productivity and potential damage to the bucket. Undercarriage, engine, hydraulics, and cab systems were within acceptable limits. A re-inspection in two weeks is recommended to monitor wear progression.",
         "safety_findings": [],
         "action_items": [
             {"priority": 1, "action": "Order replacement bucket teeth", "risk": "Low - Wear item"},
@@ -298,7 +298,7 @@ MOCK_INSPECTIONS = [
         "status": "PASS",
         "date": "2025-01-12",
         "inspector": "Sriram N.",
-        "summary": "All systems nominal. Tire pressure within spec.",
+        "summary": "This daily walkaround of the CAT 745 Articulated Truck (serial CAT0745X22222) at Mountain Mining Co, Denver, CO, was completed with no issues identified. Tire pressures were verified across all wheels and are within specification. Brake systems, steering, dump body hydraulics, and lighting were checked and found operational. The unit is approved for continued haul operations with no action items or follow-up required.",
         "safety_findings": [],
         "action_items": []
     },
@@ -312,7 +312,7 @@ MOCK_INSPECTIONS = [
         "status": "In Progress",
         "date": "2025-01-11",
         "inspector": "Sriram N.",
-        "summary": "",
+        "summary": "This safety inspection has not yet been completed. The CAT 336 Excavator (serial CAT0336X33333) at Urban Development Corp, Phoenix, AZ, is currently in progress. Once the inspector finishes the walkaround and checklist, the AI assistant will analyze findings and generate the full executive summary, safety findings, and action items here.",
         "safety_findings": [],
         "action_items": []
     }
@@ -351,7 +351,7 @@ MOCK_INSPECTION_DETAIL = {
     "status": "FAIL",
     "date": "2025-01-14",
     "inspector": "Sriram N.",
-    "summary": "This safety inspection identified a critical hydraulic leak in the main boom cylinder that requires immediate attention. The leak was detected during visual inspection and confirmed with pressure testing. All other systems are operating within normal parameters, but the equipment should be taken out of service until repairs are completed.",
+    "summary": "This safety inspection of the CAT D6 Dozer (serial CAT0D6X67890) at Highway Construction LLC, Austin, TX, identified a critical hydraulic leak in the main boom cylinder that requires immediate attention. The leak was detected during visual inspection and confirmed with pressure testing; the high-pressure line is compromised and poses both equipment failure and safety risk. A secondary finding—reduced operator visibility due to a cracked side mirror—was also documented and should be addressed for compliance. All other systems (stick cylinder, engine oil and coolant, backup camera, undercarriage) are operating within normal parameters. The equipment should be taken out of service until the hydraulic line is replaced and a follow-up inspection confirms repairs. Recommended parts have been matched for the hydraulic hose assembly and side mirror.",
     "safety_findings": [
         "Critical: Hydraulic leak detected in main boom cylinder - High pressure line compromised",
         "Warning: Operator visibility reduced due to cracked side mirror"
@@ -388,8 +388,64 @@ MOCK_INSPECTION_DETAIL = {
         {"id": "m4", "type": "video", "url": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800", "thumbnail": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200", "timestamp": "10:30:00", "caption": "Equipment walkthrough video"}
     ],
     "similar_inspections": [
-        {"id": "insp-010", "title": "Similar Hydraulic Issues Cluster", "summary": "3 other D6 units in the fleet have shown similar hydraulic line wear in the past 90 days", "count": 3},
-        {"id": "insp-011", "title": "Mirror Damage Pattern", "summary": "5 units reported side mirror damage this quarter, possible site condition issue", "count": 5}
+        {
+            "id": "insp-010",
+            "equipment_model": "CAT D6T Dozer",
+            "serial_number": "CAT0D6T44123",
+            "customer": "Highway Construction LLC",
+            "location": "San Antonio, TX",
+            "inspection_date": "2025-01-08",
+            "status": "PASS",
+            "issue_title": "Hydraulic leak – main boom cylinder high-pressure line",
+            "issue_description": "During a safety inspection, a critical hydraulic leak was identified at the main boom cylinder. The high-pressure line showed visible wear and a small crack at the fitting, with fluid seepage. Pressure testing confirmed a drop under load. The issue was consistent with similar failures seen on other D6 units in the fleet.",
+            "executive_summary": "This safety inspection of the CAT D6T Dozer (serial CAT0D6T44123) at Highway Construction LLC, San Antonio, identified a critical hydraulic leak at the main boom cylinder. The high-pressure line was replaced using part 5I-4461 (Hydraulic Hose Assembly), the system was refilled and bled, and a follow-up inspection confirmed no further leaks. The operator was trained on daily visual checks of hydraulic fittings. The unit was returned to service and passed re-inspection on 2025-01-12.",
+            "how_they_fixed_it": [
+                "Depressurized the hydraulic system and safely supported the boom; removed the damaged high-pressure line (5I-4461) and inspected the port for scoring.",
+                "Installed new Hydraulic Hose Assembly (P/N 5I-4461) with new O-ring seal kit (1U-1857); torqued fittings to spec and refilled hydraulic reservoir to correct level.",
+                "Bled air from the boom circuit per manual, cycled boom several times, and rechecked fluid level; ran at operating pressure for 15 minutes and confirmed no leaks.",
+                "Scheduled and completed follow-up inspection 4 days later; all hydraulic checks passed. Documented repair in maintenance log and updated PM schedule."
+            ],
+            "parts_used": ["5I-4461 Hydraulic Hose Assembly", "1U-1857 O-Ring Seal Kit"],
+            "resolution_notes": "Total downtime ~2 days. Same repair has held for 3+ months on two other fleet D6s."
+        },
+        {
+            "id": "insp-011",
+            "equipment_model": "CAT D6 Dozer",
+            "serial_number": "CAT0D6X55100",
+            "customer": "Desert Earthworks",
+            "location": "Phoenix, AZ",
+            "inspection_date": "2025-01-05",
+            "status": "PASS",
+            "issue_title": "Cracked driver-side mirror assembly",
+            "issue_description": "The driver-side mirror housing was cracked and the glass was loose, reducing rear and side visibility. Damage was consistent with impact (e.g. gate or obstacle). This is a common finding across multiple units at the same site.",
+            "executive_summary": "This daily walkaround of the CAT D6 Dozer (serial CAT0D6X55100) at Desert Earthworks, Phoenix, flagged a cracked side mirror as a safety compliance issue. Maintenance replaced the mirror assembly (P/N 9W-3214) the same day. Post-repair inspection confirmed secure mounting and correct adjustment. The site supervisor was briefed on the pattern of mirror damage; additional signage and spotter protocols were added in tight areas to reduce recurrence.",
+            "how_they_fixed_it": [
+                "Ordered Side Mirror Assembly (P/N 9W-3214) from local dealer; received and installed within same shift.",
+                "Removed damaged mirror and wiring; installed new assembly, aligned for optimal field of view, and tightened per spec.",
+                "Verified no loose wiring or vibration; documented replacement and cleared unit for operation. Briefed operator on reporting any new contact damage."
+            ],
+            "parts_used": ["9W-3214 Side Mirror Assembly"],
+            "resolution_notes": "Same-day repair. Five other units at this site had mirror damage this quarter; site conditions were addressed to reduce repeat issues."
+        },
+        {
+            "id": "insp-012",
+            "equipment_model": "CAT D6N Dozer",
+            "serial_number": "CAT0D6N77882",
+            "customer": "Midwest Grading Co",
+            "location": "Kansas City, MO",
+            "inspection_date": "2024-12-20",
+            "status": "PASS",
+            "issue_title": "Hydraulic leak and track tension monitoring",
+            "issue_description": "Inspection found a minor hydraulic leak at the stick cylinder seal and track tension at the low end of the acceptable range. Both were addressed before they could develop into major failures.",
+            "executive_summary": "This TA1 inspection of the CAT D6N (serial CAT0D6N77882) at Midwest Grading Co identified a minor hydraulic leak at the stick cylinder and track tension that required adjustment. The cylinder seal was replaced and the track was tensioned to spec. A follow-up inspection two weeks later showed no further leaks and track within range. The unit has operated without recurrence for 6 weeks.",
+            "how_they_fixed_it": [
+                "Stick cylinder: Drained and disassembled rod end; replaced seal kit, reassembled, refilled and bled; pressure-tested with no leaks.",
+                "Track tension: Adjusted per manual to correct sag; rechecked after 30 min of operation and documented measurement.",
+                "Scheduled re-inspection at 2 weeks; both items passed. Added hydraulic and undercarriage to next PM checklist."
+            ],
+            "parts_used": ["Stick cylinder seal kit (OEM)", "Track adjustment per manual"],
+            "resolution_notes": "Combined repair and adjustment in one downtime window (~4 hours). No repeat issues to date."
+        }
     ]
 }
 
@@ -425,22 +481,27 @@ async def get_inspections(status: Optional[str] = None, inspection_type: Optiona
     """Get list of inspections with optional filters"""
     results = MOCK_INSPECTIONS.copy()
     # Include dynamically created inspections so they appear on the dashboard
+    list_keys = ("id", "equipment_model", "serial_number", "customer", "location", "inspection_type", "status", "date", "inspector", "summary", "safety_findings", "action_items")
     for insp in CREATED_INSPECTIONS.values():
-        results.append({k: v for k, v in insp.items() if k in ("id", "equipment_model", "serial_number", "customer", "location", "inspection_type", "status", "date", "inspector", "summary", "safety_findings", "action_items")})
+        if not isinstance(insp, dict):
+            continue
+        item = {k: insp.get(k) for k in list_keys if k in insp}
+        if item.get("id") and item.get("equipment_model"):
+            results.append(item)
 
     if status and status != "all":
-        results = [i for i in results if i["status"].lower() == status.lower()]
+        results = [i for i in results if i.get("status") and i["status"].lower() == status.lower()]
 
     if inspection_type and inspection_type != "all":
-        results = [i for i in results if i["inspection_type"].lower() == inspection_type.lower()]
+        results = [i for i in results if i.get("inspection_type") and i["inspection_type"].lower() == inspection_type.lower()]
 
     if search:
         search_lower = search.lower()
         results = [i for i in results if
-                   search_lower in i["equipment_model"].lower() or
-                   search_lower in i["serial_number"].lower() or
-                   search_lower in i["customer"].lower() or
-                   search_lower in i["location"].lower()]
+                   search_lower in (i.get("equipment_model") or "").lower() or
+                   search_lower in (i.get("serial_number") or "").lower() or
+                   search_lower in (i.get("customer") or "").lower() or
+                   search_lower in (i.get("location") or "").lower()]
 
     return results
 
@@ -476,7 +537,7 @@ async def get_inspection(inspection_id: str):
         "status": "Submitted",
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "inspector": "Sriram N.",
-        "summary": "This inspection has been completed successfully. The AI assistant analyzed the equipment and identified several items for review. All critical safety checks passed, with minor maintenance recommendations noted below.",
+        "summary": "This inspection has been completed successfully. The AI assistant analyzed the equipment during the live inspection and documented findings across hydraulics, engine, safety equipment, and structural components. All critical safety checks have been reviewed: no critical safety issues were detected. Minor maintenance recommendations and any inspector-override checklist results are reflected in the Checklist and Action Items sections below. Review the captured findings and schedule follow-up or preventive maintenance as needed.",
         "safety_findings": ["No critical safety issues detected"],
         "action_items": [
             {"priority": 1, "action": "Review captured findings", "risk": "Low", "why": "Ensure all items documented"},
@@ -524,10 +585,25 @@ async def update_checklist_item(inspection_id: str, item_id: str, result: str):
 async def finish_inspection(inspection_id: str):
     """Finish inspection and generate report"""
     if inspection_id in CREATED_INSPECTIONS:
-        CREATED_INSPECTIONS[inspection_id]["status"] = "Submitted"
-        CREATED_INSPECTIONS[inspection_id]["summary"] = (
-            CREATED_INSPECTIONS[inspection_id].get("summary")
-            or "This inspection has been completed successfully. The AI assistant analyzed the equipment and identified several items for review. All critical safety checks passed, with minor maintenance recommendations noted below."
+        insp = CREATED_INSPECTIONS[inspection_id]
+        insp["status"] = "Submitted"
+        equipment = insp.get("equipment_model", "Equipment")
+        serial = insp.get("serial_number", "")
+        customer = insp.get("customer", "Customer")
+        location = insp.get("location", "")
+        insp_type = insp.get("inspection_type", "Inspection")
+        checklist = insp.get("checklist") or []
+        findings = insp.get("findings") or []
+        action_count = len(insp.get("action_items") or [])
+        fail_count = sum(1 for c in checklist if isinstance(c, dict) and c.get("result") == "FAIL")
+        pass_count = sum(1 for c in checklist if isinstance(c, dict) and c.get("result") == "PASS")
+        insp["summary"] = (
+            insp.get("summary")
+            or f"This {insp_type} of the {equipment}" + (f" (serial {serial})" if serial else "")
+            + f" at {customer}, {location}, has been completed successfully. "
+            + f"The AI assistant analyzed the equipment and documented {len(findings)} finding(s) and {len(checklist)} checklist item(s): {pass_count} passed, {fail_count} failed, with the remainder marked for monitoring. "
+            + (f"There are {action_count} prioritized action item(s) below; address critical and high-risk items before returning the unit to service. " if action_count else "No critical action items were identified; review the checklist and schedule preventive maintenance as needed. ")
+            + "Full details are available in the Summary, Checklist, Media, and Parts tabs."
         )
     return {
         "success": True,
