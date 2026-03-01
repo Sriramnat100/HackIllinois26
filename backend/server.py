@@ -416,30 +416,33 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     return status_checks
 
+# Store for dynamically created inspections (must be before get_inspections so list can include them)
+CREATED_INSPECTIONS = {}
+
 # Inspections endpoints
 @api_router.get("/inspections")
 async def get_inspections(status: Optional[str] = None, inspection_type: Optional[str] = None, search: Optional[str] = None):
     """Get list of inspections with optional filters"""
     results = MOCK_INSPECTIONS.copy()
-    
+    # Include dynamically created inspections so they appear on the dashboard
+    for insp in CREATED_INSPECTIONS.values():
+        results.append({k: v for k, v in insp.items() if k in ("id", "equipment_model", "serial_number", "customer", "location", "inspection_type", "status", "date", "inspector", "summary", "safety_findings", "action_items")})
+
     if status and status != "all":
         results = [i for i in results if i["status"].lower() == status.lower()]
-    
+
     if inspection_type and inspection_type != "all":
         results = [i for i in results if i["inspection_type"].lower() == inspection_type.lower()]
-    
+
     if search:
         search_lower = search.lower()
-        results = [i for i in results if 
-                   search_lower in i["equipment_model"].lower() or 
+        results = [i for i in results if
+                   search_lower in i["equipment_model"].lower() or
                    search_lower in i["serial_number"].lower() or
                    search_lower in i["customer"].lower() or
                    search_lower in i["location"].lower()]
-    
-    return results
 
-# Store for dynamically created inspections
-CREATED_INSPECTIONS = {}
+    return results
 
 @api_router.get("/inspections/{inspection_id}")
 async def get_inspection(inspection_id: str):
@@ -502,8 +505,14 @@ async def create_inspection(inspection: InspectionCreate):
         "inspector": "Sriram N.",
         "summary": "",
         "safety_findings": [],
-        "action_items": []
+        "action_items": [],
+        "findings": MOCK_INSPECTION_DETAIL.get("findings", []),
+        "checklist": MOCK_INSPECTION_DETAIL.get("checklist", []),
+        "parts_matches": MOCK_INSPECTION_DETAIL.get("parts_matches", []),
+        "media": [],
+        "similar_inspections": MOCK_INSPECTION_DETAIL.get("similar_inspections", []),
     }
+    CREATED_INSPECTIONS[new_id] = new_inspection
     return new_inspection
 
 @api_router.put("/inspections/{inspection_id}/checklist/{item_id}")
@@ -514,6 +523,12 @@ async def update_checklist_item(inspection_id: str, item_id: str, result: str):
 @api_router.post("/inspections/{inspection_id}/finish")
 async def finish_inspection(inspection_id: str):
     """Finish inspection and generate report"""
+    if inspection_id in CREATED_INSPECTIONS:
+        CREATED_INSPECTIONS[inspection_id]["status"] = "Submitted"
+        CREATED_INSPECTIONS[inspection_id]["summary"] = (
+            CREATED_INSPECTIONS[inspection_id].get("summary")
+            or "This inspection has been completed successfully. The AI assistant analyzed the equipment and identified several items for review. All critical safety checks passed, with minor maintenance recommendations noted below."
+        )
     return {
         "success": True,
         "inspection_id": inspection_id,
