@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -12,10 +13,22 @@ import {
   Cell,
 } from "recharts";
 import { AlertTriangle, TrendingUp, PieChart as PieChartIcon, ArrowUp, ArrowDown } from "lucide-react";
+import { CategoryAnalyticsDetail } from "@/components/CategoryAnalyticsDetail";
 
 const COLORS = ["#059669", "#DC2626", "#D97706"];
 
 export const AnalyticsCards = ({ analytics }) => {
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryDetailOpen, setCategoryDetailOpen] = useState(false);
+
+  const handleCategoryClick = (payload) => {
+    const category = payload?.category ?? payload?.payload?.category;
+    if (category) {
+      setSelectedCategory(category);
+      setCategoryDetailOpen(true);
+    }
+  };
+
   if (!analytics) return null;
 
   const pieData = [
@@ -33,13 +46,14 @@ export const AnalyticsCards = ({ analytics }) => {
       <div className="analytics-card">
         <div className="analytics-header">
           <div className="w-8 h-8 rounded-lg bg-red-500/8 dark:bg-red-500/10 flex items-center justify-center">
+          <div className="icon-glass icon-glass-md icon-glass-red">
             <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
           </div>
           <div className="flex-1">
             <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white">
               Top Failure Categories
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Last 90 days</p>
+            <p className="text-[11px] text-slate-500 dark:text-white/90">Last 90 days</p>
           </div>
         </div>
         <div className="px-4 pt-3 pb-1">
@@ -77,27 +91,37 @@ export const AnalyticsCards = ({ analytics }) => {
                   fill="#DC2626"
                   radius={[0, 4, 4, 0]}
                   barSize={14}
+                  onClick={handleCategoryClick}
+                  cursor="pointer"
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
         <p className="analytics-insight">
+          Click a category above for detailed analytics.{" "}
           <span className="text-red-600 dark:text-red-400 font-medium">Hydraulics</span> account for 35% of all failures
         </p>
       </div>
+
+      <CategoryAnalyticsDetail
+        category={selectedCategory}
+        open={categoryDetailOpen}
+        onClose={() => setCategoryDetailOpen(false)}
+      />
 
       {/* Inspections Over Time */}
       <div className="analytics-card">
         <div className="analytics-header">
           <div className="w-8 h-8 rounded-lg bg-blue-500/8 dark:bg-blue-500/10 flex items-center justify-center">
+          <div className="icon-glass icon-glass-md icon-glass-blue">
             <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex-1">
             <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white">
               Inspection Volume
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">6 month trend</p>
+            <p className="text-[11px] text-slate-500 dark:text-white/90">6 month trend</p>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
             <ArrowUp className="w-3 h-3" />
@@ -148,13 +172,14 @@ export const AnalyticsCards = ({ analytics }) => {
       <div className="analytics-card">
         <div className="analytics-header">
           <div className="w-8 h-8 rounded-lg bg-violet-500/8 dark:bg-violet-500/10 flex items-center justify-center">
+          <div className="icon-glass icon-glass-md icon-glass-violet">
             <PieChartIcon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
           </div>
           <div className="flex-1">
             <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white">
               Inspection Outcomes
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">All time distribution</p>
+            <p className="text-[11px] text-slate-500 dark:text-white/90">All time distribution</p>
           </div>
         </div>
         <div className="px-4 py-3">
@@ -193,7 +218,7 @@ export const AnalyticsCards = ({ analytics }) => {
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: COLORS[index] }}
                     />
-                    <span className="text-[12px] text-slate-600 dark:text-slate-400">
+                    <span className="text-[12px] text-slate-600 dark:text-white">
                       {item.name}
                     </span>
                   </div>

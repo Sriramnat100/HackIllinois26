@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 /* ========================================
    CAT INSPECT AI - APPLE-GRADE DESIGN SYSTEM
@@ -124,7 +125,7 @@
 }
 
 .dark .text-page-title {
-  @apply text-slate-100;
+  @apply text-white;
 }
 
 .text-section-title {
@@ -133,7 +134,7 @@
 }
 
 .dark .text-section-title {
-  @apply text-slate-200;
+  @apply text-white;
 }
 
 .text-body {
@@ -142,7 +143,7 @@
 }
 
 .dark .text-body {
-  @apply text-slate-300;
+  @apply text-white;
 }
 
 .text-secondary {
@@ -151,7 +152,7 @@
 }
 
 .dark .text-secondary {
-  @apply text-slate-400;
+  @apply text-white/90;
 }
 
 .text-meta {
@@ -160,7 +161,7 @@
 }
 
 .dark .text-meta {
-  @apply text-slate-500;
+  @apply text-white/90;
 }
 
 /* ========================================
@@ -253,6 +254,7 @@
 .dark .table-enterprise th {
   @apply text-slate-500;
   background: rgba(22, 26, 34, 0.5);
+  @apply text-white bg-slate-800/50;
 }
 
 .table-enterprise td {
@@ -262,7 +264,7 @@
 }
 
 .dark .table-enterprise td {
-  @apply text-slate-300;
+  @apply text-white;
 }
 
 .table-enterprise tbody tr {
@@ -338,6 +340,7 @@
   background-color: #161A22;
   @apply text-slate-200;
   border-color: rgba(255, 255, 255, 0.08);
+  @apply bg-slate-800 text-white border-slate-700;
 }
 
 .dark .btn-secondary-cat:hover {
@@ -418,6 +421,7 @@
   background-color: rgba(30, 41, 59, 0.3);
   @apply text-slate-400;
   border-color: rgba(100, 116, 139, 0.15);
+  @apply bg-slate-800 text-white border-slate-700;
 }
 
 .badge-submitted {
@@ -492,6 +496,19 @@
   @apply bg-[#E5A800];
   transform: scale(1.05);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 6px 24px rgba(247, 181, 0, 0.25);
+  @apply w-14 h-14 rounded-full flex items-center justify-center;
+  background: rgba(247, 181, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background 0.15s ease-out;
+}
+
+.fab-enterprise:hover {
+  background: rgba(229, 168, 0, 0.9);
+  transform: scale(1.08);
+  box-shadow: 0 8px 30px rgba(247, 181, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .fab-enterprise:active {
@@ -556,6 +573,7 @@
 .dark .chat-bubble-assistant {
   @apply text-slate-200;
   background-color: rgba(30, 41, 59, 0.5);
+  @apply bg-slate-800 text-white;
 }
 
 .chat-chip {
@@ -582,6 +600,11 @@
   @apply text-slate-100;
   background-color: rgba(247, 181, 0, 0.1);
   border-color: rgba(247, 181, 0, 0.3);
+  @apply bg-slate-800 border-slate-700 text-white;
+}
+
+.dark .chat-chip:hover {
+  @apply bg-[#F7B500]/20 border-[#F7B500]/50 text-white;
 }
 
 /* ========================================
@@ -614,7 +637,19 @@
 }
 
 .dark .analytics-insight {
-  @apply text-slate-400;
+  @apply text-white/90;
+}
+
+/* Chart axis/labels: no grey in dark mode */
+.dark .recharts-cartesian-axis-tick text,
+.dark .recharts-legend-item text {
+  fill: white !important;
+}
+
+/* Input placeholders: white in dark mode */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ========================================
@@ -939,7 +974,7 @@
 }
 
 .dark .tab-enterprise:hover {
-  @apply text-slate-300;
+  @apply text-white;
 }
 
 .tab-enterprise[data-state="active"] {
@@ -1086,6 +1121,123 @@
   -webkit-backdrop-filter: blur(24px);
 }
 
+/* ========================================
+   LIQUID GLASS ICONS (Apple-style)
+   ======================================== */
+
+.icon-glass {
+  @apply rounded-xl flex items-center justify-center flex-shrink-0;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.dark .icon-glass {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Sizes */
+.icon-glass-sm {
+  @apply w-7 h-7 rounded-lg;
+}
+.icon-glass-md {
+  @apply w-8 h-8;
+}
+.icon-glass-lg {
+  @apply w-9 h-9;
+}
+.icon-glass-xl {
+  @apply w-10 h-10;
+}
+.icon-glass-2xl {
+  @apply w-14 h-14 rounded-2xl;
+}
+
+/* Colored tint variants (subtle, keeps glass look) */
+.icon-glass-amber {
+  background: rgba(247, 181, 0, 0.2);
+  border-color: rgba(247, 181, 0, 0.3);
+}
+.dark .icon-glass-amber {
+  background: rgba(247, 181, 0, 0.12);
+  border-color: rgba(247, 181, 0, 0.2);
+}
+
+.icon-glass-blue {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+.dark .icon-glass-blue {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.icon-glass-red {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+.dark .icon-glass-red {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+.icon-glass-violet {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+.dark .icon-glass-violet {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+/* ========================================
+   LANDING PAGE - v0 Caterpillar theme (HSL for Tailwind)
+   ======================================== */
+.landing-page {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 96%;
+  --card: 0 0% 4%;
+  --card-foreground: 0 0% 96%;
+  --popover: 0 0% 4%;
+  --popover-foreground: 0 0% 96%;
+  --primary: 45 100% 53%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 96%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 64%;
+  --accent: 45 100% 53%;
+  --accent-foreground: 0 0% 0%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
+  --ring: 45 100% 53%;
+}
+.landing-page .font-serif {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* Landing page staggered animations */
+.animate-slide-up,
+.animate-fade-in,
+.animate-scale-in {
+  animation-fill-mode: both;
+}
+.landing-delay-1 { animation-delay: 0.1s; }
+.landing-delay-2 { animation-delay: 0.2s; }
+.landing-delay-35 { animation-delay: 0.35s; }
+.landing-delay-5 { animation-delay: 0.5s; }
+
+/* Hero dust float keyframe */
+@keyframes landing-float {
+  0% { opacity: 0.6; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.5); }
+}
+
+/* Debug wrapper fix */
 @layer base {
   [data-debug-wrapper="true"] {
     display: contents !important;

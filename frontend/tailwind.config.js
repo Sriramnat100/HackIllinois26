@@ -70,6 +70,35 @@ module.exports = {
   				to: {
   					height: '0'
   				}
+  			},
+  			'gradient-pulse': {
+  				'0%, 100%': { opacity: '0.8' },
+  				'50%': { opacity: '0.4' }
+  			},
+  			'float': {
+  				'0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+  				'33%': { transform: 'translate(30px, -20px) scale(1.05)' },
+  				'66%': { transform: 'translate(-20px, 20px) scale(0.95)' }
+  			},
+  			'float-slow': {
+  				'0%, 100%': { transform: 'translate(0, 0)' },
+  				'50%': { transform: 'translate(-15px, -25px)' }
+  			},
+  			'float-slower': {
+  				'0%, 100%': { transform: 'translate(0, 0)' },
+  				'50%': { transform: 'translate(20px, 15px)' }
+  			},
+  			'fade-in': {
+  				from: { opacity: '0' },
+  				to: { opacity: '1' }
+  			},
+  			'scale-in': {
+  				from: { opacity: '0', transform: 'scale(0.9)' },
+  				to: { opacity: '1', transform: 'scale(1)' }
+  			},
+  			'slide-up': {
+  				from: { opacity: '0', transform: 'translateY(20px)' },
+  				to: { opacity: '1', transform: 'translateY(0)' }
   			}
   		},
   		animation: {
@@ -93,6 +122,14 @@ module.exports = {
   		backdropBlur: {
   			'2xl': '40px',
   			'3xl': '64px',
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'gradient-pulse': 'gradient-pulse 6s ease-in-out infinite',
+  			'float': 'float 15s ease-in-out infinite',
+  			'float-slow': 'float-slow 20s ease-in-out infinite',
+  			'float-slower': 'float-slower 25s ease-in-out infinite',
+  			'fade-in': 'fade-in 0.6s ease-out forwards',
+  			'scale-in': 'scale-in 0.5s ease-out forwards',
+  			'slide-up': 'slide-up 0.6s ease-out forwards'
   		}
   	}
   },

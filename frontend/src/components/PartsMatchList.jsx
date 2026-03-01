@@ -18,15 +18,13 @@ export const PartsMatchList = ({ parts = [] }) => {
             <div className="flex items-start gap-4">
               {/* Rank/Best Match Indicator */}
               <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                index === 0 
-                  ? "bg-[#F7B500]/10" 
-                  : "bg-slate-100 dark:bg-slate-800"
+                "icon-glass icon-glass-xl flex-shrink-0",
+                index === 0 ? "icon-glass-amber" : ""
               )}>
                 {index === 0 ? (
                   <Award className="w-5 h-5 text-[#F7B500]" />
                 ) : (
-                  <Package className="w-5 h-5 text-slate-400" />
+                  <Package className="w-5 h-5 text-slate-400 dark:text-white/80" />
                 )}
               </div>
               
@@ -41,7 +39,7 @@ export const PartsMatchList = ({ parts = [] }) => {
                 
                 {/* Part Info */}
                 <div className="mb-2">
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                  <span className="text-[11px] text-slate-400 dark:text-white/90 font-mono">
                     #{part.part_number}
                   </span>
                   <h4 className="font-semibold text-[15px] text-slate-900 dark:text-white mt-0.5">
@@ -52,7 +50,7 @@ export const PartsMatchList = ({ parts = [] }) => {
                 {/* Fitment Certainty */}
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    <span className="text-[11px] text-slate-500 dark:text-white font-medium">
                       Fitment Certainty
                     </span>
                     <span className="text-[13px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -72,7 +70,7 @@ export const PartsMatchList = ({ parts = [] }) => {
                   {part.compatible_models.map((model) => (
                     <span
                       key={model}
-                      className="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded font-medium"
+                      className="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-white px-2 py-0.5 rounded font-medium"
                     >
                       {model}
                     </span>
@@ -83,6 +81,7 @@ export const PartsMatchList = ({ parts = [] }) => {
             
             {/* Add to Order Button */}
             <Button
+              asChild
               className={cn(
                 "flex-shrink-0",
                 index === 0 
@@ -91,8 +90,14 @@ export const PartsMatchList = ({ parts = [] }) => {
               )}
               data-testid={`add-part-${part.id}`}
             >
-              <ShoppingCart className="w-4 h-4 mr-1.5" />
-              Add to Order
+              <a
+                href={`https://www.amazon.com/s?k=${encodeURIComponent([part.part_number, part.part_name].filter(Boolean).join(" "))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ShoppingCart className="w-4 h-4 mr-1.5" />
+                Add to Order
+              </a>
             </Button>
           </div>
         </div>
@@ -100,11 +105,11 @@ export const PartsMatchList = ({ parts = [] }) => {
 
       {parts.length === 0 && (
         <div className="text-center py-16">
-          <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
-            <Package className="w-7 h-7 text-slate-300 dark:text-slate-600" />
+          <div className="icon-glass icon-glass-2xl rounded-full mx-auto mb-4">
+            <Package className="w-7 h-7 text-slate-300 dark:text-white/70" />
           </div>
-          <p className="text-[14px] font-medium text-slate-500 dark:text-slate-400">No parts matches found</p>
-          <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-1">AI will identify parts during live inspection</p>
+          <p className="text-[14px] font-medium text-slate-500 dark:text-white">No parts matches found</p>
+          <p className="text-[12px] text-slate-400 dark:text-white/90 mt-1">AI will identify parts during live inspection</p>
         </div>
       )}
     </div>

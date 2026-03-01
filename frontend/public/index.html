@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#000000" />
         <meta name="description" content="Cat Inspect AI" />
+        <meta name="description" content="Cat Inspect AI - AI-powered inspection platform" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
@@ -23,6 +24,27 @@
         -->
         <title>Cat Inspect AI</title>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
+        <!-- Emergent script removed per request - was injecting bottom-right "e" button -->
+        <script>
+            // Only load visual edit scripts when inside an iframe
+            if (window.self !== window.top) {
+                // Load debug monitor script
+                var debugMonitorScript = document.createElement('script');
+                debugMonitorScript.src = 'https://assets.emergent.sh/scripts/debug-monitor.js';
+                document.head.appendChild(debugMonitorScript);
+
+                // Configure Tailwind
+                window.tailwind = window.tailwind || {};
+                tailwind.config = {
+                    corePlugins: { preflight: false },
+                };
+
+                // Load Tailwind CDN
+                var tailwindScript = document.createElement('script');
+                tailwindScript.src = 'https://cdn.tailwindcss.com';
+                document.head.appendChild(tailwindScript);
+            }
+        </script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
